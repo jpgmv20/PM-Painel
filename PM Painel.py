@@ -27,16 +27,17 @@ def mostrar_menu():
         print("[3] Sair\n")
 
         opcao = input("Escolha uma opcao: ")
-        if opcao == "1":
-            git_menu()
-        elif opcao == "2":
-            programas_menu()
-        elif opcao == "3":
-            print("Saindo...")
-            break
-        else:
-            print("Opcao invalida.")
-            pause()
+        match opcao:
+            case "1":
+                git_menu()
+            case "2":
+                programas_menu()
+            case "3":
+                print("Saindo...")
+                break
+            case _:
+                print("Opcao invalida.")
+                pause()
 
 # ============================
 # MENU GIT
