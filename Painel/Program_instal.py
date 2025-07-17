@@ -3,12 +3,7 @@ import os
 import subprocess
 import requests
 from kivy import *
-
-def limpar_tela():
-    os.system("cls" if os.name == "nt" else "clear")#coloca no cmd um comando para limpar o terminal dependendo do sistema operacional
-
-def pause():
-    input("\nPressione Enter para continuar...")
+from Painel.Funcoes.Funcoes import *
 
 def instalar_git():
     print("Baixando e instalando Git...")

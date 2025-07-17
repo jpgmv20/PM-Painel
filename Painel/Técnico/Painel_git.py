@@ -2,12 +2,7 @@ import os
 import subprocess
 import requests
 from kivy import *
-
-def limpar_tela():
-    os.system("cls" if os.name == "nt" else "clear")#coloca no cmd um comando para limpar o terminal dependendo do sistema operacional
-
-def pause():
-    input("\nPressione Enter para continuar...")
+from Painel.Funcoes.Funcoes import *
 
 def get_git_config(key):
     result = subprocess.getoutput(f"git config --global {key}")
