@@ -1,0 +1,248 @@
+[19/07/2026 03:27:14] [DEBUG] Evento emitido: before_start
+[19/07/2026 03:27:14] [INFO] Inicializando ambiente...
+[19/07/2026 03:27:14] [DEBUG] Listener registrado: file_changed
+[19/07/2026 03:27:14] [DEBUG] Comando registrado: status
+[19/07/2026 03:27:14] [DEBUG] Comando registrado: reload
+[19/07/2026 03:27:14] [DEBUG] Comando registrado: plugins
+[19/07/2026 03:27:14] [DEBUG] Comando registrado: logs
+[19/07/2026 03:27:14] [DEBUG] Comando registrado: profile
+[19/07/2026 03:27:14] [DEBUG] Listener registrado: file_changed
+[19/07/2026 03:27:14] [SUCCESS] Plugin carregado: logger_plugin
+[19/07/2026 03:27:14] [SUCCESS] Plugin carregado: teste
+[19/07/2026 03:27:14] [SUCCESS] KV carregado: main.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: test.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: testkvfile.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: audio.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: button.kv
+[19/07/2026 03:27:15] [ERROR] Erro carregando layout.kv: [Errno 2] No such file or directory: 'button.kv'
+[19/07/2026 03:27:15] [ERROR] Erro carregando test.kv: [Errno 2] No such file or directory: 'layout.kv'
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: app_button.kv
+[19/07/2026 03:27:15] [ERROR] Erro carregando app_camera.kv: 'NoneType' object is not callable
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: app_fbo.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: app_layout.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: app_logo.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: app_scatter.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: app_stencil.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: app_video.kv
+[19/07/2026 03:27:15] [ERROR] Erro carregando editor.kv: Unknown class <Root>
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: plasma.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: rotated.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: shadertree.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: codeinputtest.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: scatter.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: scrollview.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: textalign.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: main.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: pong.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: pong.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: pong.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: pong.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: pong.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: pong.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: note.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: test.kv
+[19/07/2026 03:27:15] [ERROR] Erro carregando test.kv: Unknown class <RootWidget>
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: controller.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: kivycatalog.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: gesturedatabase.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: historymanager.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: multistroke.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: settings.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: pictures.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: shadereditor.kv
+[19/07/2026 03:27:15] [ERROR] Erro carregando showcase.kv: Parser: File "C:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\share\kivy-examples\demo\showcase\showcase.kv", line 89:
+...
+     87:            id: sourcecode
+     88:            lexer: KivyLexer()
+>>   89:            text: app.sourcecode
+     90:            readonly: True
+     91:            size_hint_y: None
+...
+BuilderException: Parser: File "C:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\share\kivy-examples\demo\showcase\showcase.kv", line 89:
+...
+     87:            id: sourcecode
+     88:            lexer: KivyLexer()
+>>   89:            text: app.sourcecode
+     90:            readonly: True
+     91:            size_hint_y: None
+...
+AttributeError: 'NoneType' object has no attribute 'bind'
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\builder.py", line 245, in create_handler
+    return eval(value, idmap), bound_list
+           ~~~~^^^^^^^^^^^^^^
+  File "C:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\share\kivy-examples\demo\showcase\showcase.kv", line 89, in <module>
+    text: app.sourcecode
+    ^^
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\parser.py", line 82, in __getattribute__
+    object.__getattribute__(self, '_ensure_app')()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\parser.py", line 77, in _ensure_app
+    app.bind(on_stop=lambda instance:
+    ^^^^^^^^
+
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\builder.py", line 699, in _apply_rule
+    value, bound = create_handler(
+                   ~~~~~~~~~~~~~~^
+        widget_set, widget_set, key, value, rule,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rctx['ids'])
+        ^^^^^^^^^^^^
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\builder.py", line 248, in create_handler
+    raise BuilderException(rule.ctx, rule.line,
+                           '{}: {}'.format(e.__class__.__name__, e),
+                           cause=tb)
+
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: touchtracer.kv
+[19/07/2026 03:27:15] [ERROR] Erro carregando accordions.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando bubbles.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando buttons.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando carousel.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando checkboxes.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando codeinput.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando dropdown.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando filechoosers.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando popups.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando progressbar.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando rstdocument.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando scatter.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando screenmanager.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando sliders.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando spinner.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando splitter.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando switches.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando tabbedpanel + layouts.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando textinputs.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [ERROR] Erro carregando togglebutton.kv: Unknown class <ShowcaseScreen>
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: AnchorLayoutContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: BoxLayoutContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: ButtonContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: CheckBoxContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: FileChooserContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: FloatLayoutContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: GridLayoutContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: LabelContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: MediaContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: PlaygroundContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: PopupContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: ProgressBarContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: RestContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: ScatterContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: SelectorsContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: StackLayoutContainer.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: TextContainer.kv
+[19/07/2026 03:27:15] [ERROR] Erro carregando 1.kv: Unknown class <RootWidget>
+[19/07/2026 03:27:15] [ERROR] Erro carregando 2.kv: Unknown class <RootWidget>
+[19/07/2026 03:27:15] [ERROR] Erro carregando 3.kv: Unknown class <RootWidget>
+[19/07/2026 03:27:15] [ERROR] Erro carregando root.kv: Unknown class <RootWidget>
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: testkvdir.kv
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: test.kv
+[19/07/2026 03:27:15] [ERROR] Erro carregando compass.kv: Parser: File "C:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\share\kivy-examples\android\compass\compass.kv", line 20:
+...
+     18:            PushMatrix
+     19:            Rotate:
+>>   20:                angle: app.needle_angle
+     21:                axis: 0, 0, 1
+     22:                origin: self.center
+...
+BuilderException: Parser: File "C:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\share\kivy-examples\android\compass\compass.kv", line 20:
+...
+     18:            PushMatrix
+     19:            Rotate:
+>>   20:                angle: app.needle_angle
+     21:                axis: 0, 0, 1
+     22:                origin: self.center
+...
+AttributeError: 'NoneType' object has no attribute 'bind'
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\builder.py", line 245, in create_handler
+    return eval(value, idmap), bound_list
+           ~~~~^^^^^^^^^^^^^^
+  File "C:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\share\kivy-examples\android\compass\compass.kv", line 20, in <module>
+    angle: app.needle_angle
+    
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\parser.py", line 82, in __getattribute__
+    object.__getattribute__(self, '_ensure_app')()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\parser.py", line 77, in _ensure_app
+    app.bind(on_stop=lambda instance:
+    ^^^^^^^^
+
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\builder.py", line 927, in _build_canvas
+    value, _ = create_handler(
+               ~~~~~~~~~~~~~~^
+        widget, instr.proxy_ref,
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+        key, value, prule, idmap, True)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\Pedro\Documents\Programação\vs_code\PM-Painel\kivy_venv\Lib\site-packages\kivy\lang\builder.py", line 248, in create_handler
+    raise BuilderException(rule.ctx, rule.line,
+                           '{}: {}'.format(e.__class__.__name__, e),
+                           cause=tb)
+
+[19/07/2026 03:27:15] [SUCCESS] KV carregado: takepicture.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: backdrop.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: banner.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: bottomnavigation.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: bottomsheet.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: button.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: card.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: chip.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: datatables.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: dialog.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: dropdownitem.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: expansionpanel.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: filemanager.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: imagelist.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: label.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: list.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: menu.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: navigationdrawer.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: navigationrail.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: progressbar.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: refreshlayout.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: segmentedbutton.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: segmentedcontrol.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: selection.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: selectioncontrol.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: slider.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: sliverappbar.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: snackbar.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: spinner.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: swiper.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: tab.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: textfield.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: toolbar.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: tooltip.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: colorpicker.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: datepicker.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: timepicker.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: style.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: coverage_lang.kv
+[19/07/2026 03:27:16] [SUCCESS] KV carregado: testkv.kv
+[19/07/2026 03:27:16] [SUCCESS] Kivy iniciado | PID: 15464
+[19/07/2026 03:27:16] [SUCCESS] Watcher iniciado.
+[19/07/2026 03:27:16] [SUCCESS] Console iniciado.
+[19/07/2026 03:27:16] [SUCCESS] Inicialização: 2.364s
+[19/07/2026 03:27:16] [DEBUG] Evento emitido: app_started
+[19/07/2026 03:27:16] [SUCCESS] Ambiente iniciado.
+[19/07/2026 03:27:16] [DEBUG] Evento emitido: shutdown
+[19/07/2026 09:19:26] [DEBUG] Evento emitido: before_start
+[19/07/2026 09:19:26] [INFO] Inicializando ambiente...
+[19/07/2026 09:19:26] [DEBUG] Listener registrado: file_changed
+[19/07/2026 09:19:26] [DEBUG] Comando registrado: status
+[19/07/2026 09:19:26] [DEBUG] Comando registrado: reload
+[19/07/2026 09:19:26] [DEBUG] Comando registrado: plugins
+[19/07/2026 09:19:26] [DEBUG] Comando registrado: logs
+[19/07/2026 09:19:26] [DEBUG] Comando registrado: profile
+[19/07/2026 09:19:26] [DEBUG] Listener registrado: file_changed
+[19/07/2026 09:19:26] [SUCCESS] Plugin carregado: logger_plugin
+[19/07/2026 09:19:26] [SUCCESS] Plugin carregado: teste
+[19/07/2026 09:19:26] [INFO] Procurando arquivos KV...
+[19/07/2026 09:19:27] [SUCCESS] Carregado: view\main.kv
+[19/07/2026 09:19:27] [SUCCESS] 1 arquivo(s) KV carregado(s).
+[19/07/2026 09:19:27] [SUCCESS] Kivy iniciado | PID: 2936
+[19/07/2026 09:19:27] [SUCCESS] Watcher iniciado.
+[19/07/2026 09:19:27] [SUCCESS] Console iniciado.
+[19/07/2026 09:19:27] [SUCCESS] Inicialização: 0.698s
+[19/07/2026 09:19:27] [DEBUG] Evento emitido: app_started
+[19/07/2026 09:19:27] [SUCCESS] Ambiente iniciado.
+[19/07/2026 09:19:27] [DEBUG] Evento emitido: shutdown

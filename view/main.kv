@@ -1,0 +1,225 @@
+<TelaPrincipal>:
+    orientation: 'vertical'
+    spacing: 0
+
+    # Define o fundo geral do app como Branco
+    canvas.before:
+        Color:
+            rgba: 1, 1, 1, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    # ==========================================
+    # CABEÇALHO MODERNO (Azul PM)
+    # ==========================================
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint_y: None
+        height: 100               # Altura fixa do cabeçalho
+        padding: [30, 0, 30, 0]   # Padding nas laterais internas
+        
+        canvas.before:
+            Color:
+                rgba: 0.05, 0.29, 0.63, 1 # Azul Escuro
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            # Linha decorativa azul mais clara na borda inferior do cabeçalho
+            Color:
+                rgba: 0.1, 0.4, 0.8, 1
+            Line:
+                points: [self.x, self.y, self.width, self.y]
+                width: 2
+
+        Label:
+            text: "SISTEMA INTEGRADO PM"
+            font_size: '22sp'
+            bold: True
+            color: 1, 1, 1, 1
+            halign: 'left'
+            text_size: self.size
+            valign: 'middle'      # Centraliza o texto verticalmente no cabeçalho
+
+
+    # ==========================================
+    # CORPO DO APP: DIVISÃO EM DUAS ÁREAS BRANCAS
+    # ==========================================
+    BoxLayout:
+        orientation: 'horizontal'
+        spacing: 0
+
+        # --- ÁREA 1: LOGIN (Branca) ---
+        BoxLayout:
+            orientation: 'vertical'
+            padding: [50, 30, 50, 30]
+            spacing: 15
+            size_hint_x: 0.45      # Reduzido ligeiramente para dar espaço ao "OU"
+
+            Label:
+                text: "Acessar Conta"
+                font_size: '22sp'
+                bold: True
+                color: 0.05, 0.29, 0.63, 1
+                size_hint_y: None
+                height: 40
+
+            Widget:
+                size_hint_y: None
+                height: 10
+
+            Label:
+                text: "Usuário ou Matrícula"
+                color: 0.3, 0.3, 0.3, 1
+                font_size: '14sp'
+                halign: 'left'
+                text_size: self.size
+                size_hint_y: None
+                height: 20
+            TextInput:
+                id: login_usuario
+                multiline: False
+                write_tab: False
+                background_color: 0.95, 0.95, 0.95, 1
+                size_hint_y: None
+                height: 40
+
+            Label:
+                text: "Senha"
+                color: 0.3, 0.3, 0.3, 1
+                font_size: '14sp'
+                halign: 'left'
+                text_size: self.size
+                size_hint_y: None
+                height: 20
+            TextInput:
+                id: login_senha
+                password: True
+                multiline: False
+                write_tab: False
+                background_color: 0.95, 0.95, 0.95, 1
+                size_hint_y: None
+                height: 40
+
+            Widget:
+
+            Button:
+                text: "ENTRAR"
+                font_size: '16sp'
+                bold: True
+                size_hint_y: None
+                height: 45
+                background_color: 0.05, 0.29, 0.63, 1
+                background_normal: ''
+                on_press: root.executar_login()
+
+
+        # --- DIVISOR CENTRAL: LINHA VERTICAL + "OU" ---
+        FloatLayout:
+            size_hint_x: 0.1       # Ocupa 10% da largura total da tela
+            
+            canvas.before:
+                # Desenha a Linha Vertical Cinza bem no meio do FloatLayout
+                Color:
+                    rgba: 0.8, 0.8, 0.8, 1
+                Line:
+                    points: [self.center_x, self.y + 40, self.center_x, self.top - 40]
+                    width: 1
+
+                # Desenha o Círculo Azul no centro exato da linha
+                Color:
+                    rgba: 0.05, 0.29, 0.63, 1
+                Ellipse:
+                    pos: self.center_x - 20, self.center_y - 20
+                    size: 40, 40
+
+            # Texto "OU" posicionado dentro do círculo azul
+            Label:
+                text: "OU"
+                font_size: '14sp'
+                bold: True
+                color: 1, 1, 1, 1  # Texto Branco
+                size_hint: None, None
+                size: 40, 40
+                pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+
+
+        # --- ÁREA 2: CADASTRO (Branca) ---
+        BoxLayout:
+            orientation: 'vertical'
+            padding: [50, 30, 50, 30]
+            spacing: 15
+            size_hint_x: 0.45
+
+            Label:
+                text: "Criar Nova Conta"
+                font_size: '22sp'
+                bold: True
+                color: 0.05, 0.29, 0.63, 1
+                size_hint_y: None
+                height: 40
+
+            Widget:
+                size_hint_y: None
+                height: 10
+
+            Label:
+                text: "Nome Completo"
+                color: 0.3, 0.3, 0.3, 1
+                font_size: '14sp'
+                halign: 'left'
+                text_size: self.size
+                size_hint_y: None
+                height: 20
+            TextInput:
+                id: cad_nome
+                multiline: False
+                write_tab: False
+                background_color: 0.95, 0.95, 0.95, 1
+                size_hint_y: None
+                height: 40
+
+            Label:
+                text: "E-mail Corporativo"
+                color: 0.3, 0.3, 0.3, 1
+                font_size: '14sp'
+                halign: 'left'
+                text_size: self.size
+                size_hint_y: None
+                height: 20
+            TextInput:
+                id: cad_email
+                multiline: False
+                write_tab: False
+                background_color: 0.95, 0.95, 0.95, 1
+                size_hint_y: None
+                height: 40
+
+            Label:
+                text: "Senha de Acesso"
+                color: 0.3, 0.3, 0.3, 1
+                font_size: '14sp'
+                halign: 'left'
+                text_size: self.size
+                size_hint_y: None
+                height: 20
+            TextInput:
+                id: cad_senha
+                password: True
+                multiline: False
+                write_tab: False
+                background_color: 0.95, 0.95, 0.95, 1
+                size_hint_y: None
+                height: 40
+
+            Widget:
+
+            Button:
+                text: "CADASTRAR"
+                font_size: '16sp'
+                bold: True
+                size_hint_y: None
+                height: 45
+                background_color: 0.05, 0.29, 0.63, 1
+                background_normal: ''
+                on_press: root.executar_cadastro()
