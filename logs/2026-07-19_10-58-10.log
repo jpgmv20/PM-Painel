@@ -1,0 +1,58 @@
+[19/07/2026 10:58:10] [DEBUG] Evento emitido: before_start
+[19/07/2026 10:58:10] [DEBUG] Comando registrado: status
+[19/07/2026 10:58:10] [DEBUG] Comando registrado: reload
+[19/07/2026 10:58:10] [DEBUG] Comando registrado: restart
+[19/07/2026 10:58:10] [DEBUG] Comando registrado: plugins
+[19/07/2026 10:58:10] [DEBUG] Comando registrado: logs
+[19/07/2026 10:58:10] [DEBUG] Comando registrado: profile
+[19/07/2026 10:58:10] [DEBUG] Comando registrado: help
+[19/07/2026 10:58:10] [DEBUG] Comando registrado: stop
+[19/07/2026 10:58:10] [DEBUG] Comando registrado: exit
+[19/07/2026 10:58:10] [DEBUG] Listener registrado: file_changed
+[19/07/2026 10:58:10] [SUCCESS] Plugin carregado: logger_plugin
+[19/07/2026 10:58:10] [DEBUG] Listener registrado: after_reload
+[19/07/2026 10:58:10] [DEBUG] Listener registrado: shutdown
+[19/07/2026 10:58:10] [SUCCESS] Plugin carregado: teste
+[19/07/2026 10:58:10] [DEBUG] Listener registrado: file_changed
+[19/07/2026 10:58:10] [SUCCESS] Recarga automática pronta (reinício ao salvar arquivos).
+[19/07/2026 10:58:10] [INFO] Iniciando main.py
+[19/07/2026 10:58:10] [SUCCESS] Aplicação iniciada | PID: 9616
+[19/07/2026 10:58:10] [SUCCESS] Watcher iniciado.
+[19/07/2026 10:58:10] [SUCCESS] Console iniciado. Digite 'help' para ver os comandos.
+[19/07/2026 10:58:10] [SUCCESS] Inicialização do DevTools: 0.029s
+[19/07/2026 10:58:10] [DEBUG] Evento emitido: app_started
+[19/07/2026 10:58:10] [SUCCESS] Ambiente iniciado.
+[19/07/2026 10:58:17] [DEBUG] Evento emitido: file_changed
+[19/07/2026 10:58:17] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 10:58:17] [DEBUG] Evento emitido: before_reload
+[19/07/2026 10:58:17] [INFO] Recarga agendada: modified: main.kv
+[19/07/2026 10:58:17] [INFO] Reiniciando aplicação (modified: main.kv).
+[19/07/2026 10:58:17] [INFO] Encerrando aplicação...
+[19/07/2026 10:58:17] [INFO] Iniciando main.py
+[19/07/2026 10:58:17] [SUCCESS] Aplicação iniciada | PID: 24000
+[19/07/2026 10:58:17] [DEBUG] Evento emitido: after_reload
+[19/07/2026 10:58:30] [DEBUG] Evento emitido: file_changed
+[19/07/2026 10:58:30] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 10:58:30] [DEBUG] Evento emitido: before_reload
+[19/07/2026 10:58:30] [INFO] Recarga agendada: modified: main.kv
+[19/07/2026 10:58:30] [INFO] Reiniciando aplicação (modified: main.kv).
+[19/07/2026 10:58:30] [INFO] Encerrando aplicação...
+[19/07/2026 10:58:30] [INFO] Iniciando main.py
+[19/07/2026 10:58:30] [SUCCESS] Aplicação iniciada | PID: 19576
+[19/07/2026 10:58:30] [DEBUG] Evento emitido: after_reload
+[19/07/2026 11:00:00] [DEBUG] Evento emitido: file_changed
+[19/07/2026 11:00:00] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 11:00:00] [DEBUG] Evento emitido: before_reload
+[19/07/2026 11:00:00] [INFO] Recarga agendada: modified: config.py
+[19/07/2026 11:00:01] [INFO] Reiniciando aplicação (modified: config.py).
+[19/07/2026 11:00:01] [INFO] Encerrando aplicação...
+[19/07/2026 11:00:01] [INFO] Iniciando main.py
+[19/07/2026 11:00:01] [SUCCESS] Aplicação iniciada | PID: 23076
+[19/07/2026 11:00:01] [DEBUG] Evento emitido: after_reload
+[19/07/2026 11:00:25] [WARNING] A aplicação foi encerrada.
+[19/07/2026 11:00:25] [INFO] Encerrando ambiente...
+[19/07/2026 11:00:25] [SUCCESS] Watcher encerrado.
+[19/07/2026 11:00:25] [DEBUG] Evento emitido: shutdown
+[19/07/2026 11:00:25] [INFO] Plugin descarregado: logger_plugin
+[19/07/2026 11:00:25] [INFO] Plugin descarregado: teste
+[19/07/2026 11:00:25] [SUCCESS] Ambiente encerrado.

@@ -1,167 +1,67 @@
-"""
-events.py
+"""Barramento de eventos isolado para o processo do DevTools."""
 
-Sistema interno de eventos.
-
-Permite comunicação entre módulos
-sem criar dependências diretas.
-
-Exemplo:
-
-EVENTS.on(
-    "file_changed",
-    minha_funcao
-)
-
-
-EVENTS.emit(
-    "file_changed",
-    arquivo
-)
-"""
-
+from __future__ import annotations
 
 from collections import defaultdict
-
+from collections.abc import Callable
+from threading import RLock
 
 from devtools.logger import Logger
 
 
-
 class EventBus:
+    def __init__(self) -> None:
+        self._listeners: defaultdict[str, list[Callable]] = defaultdict(list)
+        self._lock = RLock()
 
+    def on(self, event_name: str, callback: Callable) -> Callable:
+        with self._lock:
+            if callback not in self._listeners[event_name]:
+                self._listeners[event_name].append(callback)
+                Logger.debug(f"Listener registrado: {event_name}")
+        return callback
 
-    def __init__(self):
+    def off(self, event_name: str, callback: Callable) -> None:
+        with self._lock:
+            listeners = self._listeners.get(event_name, [])
+            if callback in listeners:
+                listeners.remove(callback)
+            if not listeners:
+                self._listeners.pop(event_name, None)
 
-        self.listeners = defaultdict(list)
-
-
-
-    # =====================================================
-    # Registrar evento
-    # =====================================================
-
-
-    def on(
-        self,
-        event,
-        callback
-    ):
-
-
-        if callback not in self.listeners[event]:
-
-
-            self.listeners[event].append(
-                callback
-            )
-
-
-            Logger.debug(
-                f"Listener registrado: {event}"
-            )
-
-
-
-    # =====================================================
-    # Remover evento
-    # =====================================================
-
-
-    def off(
-        self,
-        event,
-        callback
-    ):
-
-
-        if callback in self.listeners[event]:
-
-
-            self.listeners[event].remove(
-                callback
-            )
-
-
-
-    # =====================================================
-    # Emitir evento
-    # =====================================================
-
-
-    def emit(
-        self,
-        event,
-        *args,
-        **kwargs
-    ):
-
-
-        Logger.debug(
-            f"Evento emitido: {event}"
-        )
-
-
-
-        for callback in list(
-            self.listeners[event]
-        ):
-
-
+    def emit(self, event_name: str, *args: object, **kwargs: object) -> None:
+        Logger.debug(f"Evento emitido: {event_name}")
+        with self._lock:
+            callbacks = tuple(self._listeners.get(event_name, ()))
+        for callback in callbacks:
             try:
+                callback(*args, **kwargs)
+            except Exception as error:  # Um plugin não pode derrubar o ambiente.
+                Logger.error(f"Erro no listener '{event_name}': {error}")
 
+    def clear(self) -> None:
+        with self._lock:
+            self._listeners.clear()
 
-                callback(
-                    *args,
-                    **kwargs
-                )
+    def remove_module_listeners(self, module_name: str) -> None:
+        """Remove callbacks criados por um plugin que será descarregado."""
+        with self._lock:
+            for event_name, callbacks in tuple(self._listeners.items()):
+                kept = [
+                    callback
+                    for callback in callbacks
+                    if getattr(callback, "__module__", None) != module_name
+                ]
+                if kept:
+                    self._listeners[event_name] = kept
+                else:
+                    self._listeners.pop(event_name, None)
 
+    def listener_count(self, event_name: str | None = None) -> int:
+        with self._lock:
+            if event_name is None:
+                return sum(map(len, self._listeners.values()))
+            return len(self._listeners.get(event_name, ()))
 
-            except Exception as error:
-
-
-                Logger.error(
-                    f"Erro no evento '{event}': {error}"
-                )
-
-
-
-    # =====================================================
-    # Limpar tudo
-    # =====================================================
-
-
-    def clear(self):
-
-        self.listeners.clear()
-
-
-
-    # =====================================================
-    # Informações
-    # =====================================================
-
-
-    def registered_events(self):
-
-        return list(
-            self.listeners.keys()
-        )
-
-
-
-    def listeners_count(
-        self,
-        event
-    ):
-
-
-        return len(
-            self.listeners[event]
-        )
-
-
-
-# Instância global
 
 EVENTS = EventBus()

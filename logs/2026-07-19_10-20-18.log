@@ -1,0 +1,34 @@
+[19/07/2026 10:20:18] [DEBUG] Evento emitido: before_start
+[19/07/2026 10:20:18] [INFO] Inicializando ambiente...
+[19/07/2026 10:20:18] [SUCCESS] Projeto validado.
+[19/07/2026 10:20:18] [DEBUG] Comando registrado: status
+[19/07/2026 10:20:18] [DEBUG] Comando registrado: reload
+[19/07/2026 10:20:18] [DEBUG] Comando registrado: plugins
+[19/07/2026 10:20:18] [DEBUG] Comando registrado: logs
+[19/07/2026 10:20:18] [DEBUG] Comando registrado: profile
+[19/07/2026 10:20:18] [DEBUG] Comando registrado: help
+[19/07/2026 10:20:18] [DEBUG] Listener registrado: file_changed
+[19/07/2026 10:20:18] [SUCCESS] Plugin carregado: logger_plugin
+[19/07/2026 10:20:18] [SUCCESS] Plugin carregado: teste
+[19/07/2026 10:20:18] [DEBUG] Listener registrado: file_changed
+[19/07/2026 10:20:18] [DEBUG] Hot Reload iniciado.
+[19/07/2026 10:20:18] [INFO] KV carregado: main.kv
+[19/07/2026 10:20:18] [SUCCESS] 1 arquivo(s) KV carregado(s).
+[19/07/2026 10:20:18] [INFO] Iniciando main.py
+[19/07/2026 10:20:19] [SUCCESS] Kivy iniciado | PID: 12024
+[19/07/2026 10:20:19] [SUCCESS] Watcher iniciado.
+[19/07/2026 10:20:19] [SUCCESS] Console iniciado.
+[19/07/2026 10:20:19] [SUCCESS] Inicialização: 0.592s
+[19/07/2026 10:20:19] [DEBUG] Evento emitido: app_started
+[19/07/2026 10:20:19] [SUCCESS] Ambiente iniciado.
+[19/07/2026 10:20:19] [DEBUG] Evento emitido: file_changed
+[19/07/2026 10:20:19] [WARNING] Arquivo Python alterado.
+[19/07/2026 10:20:19] [WARNING] Restart solicitado: Arquivo Python alterado.
+[19/07/2026 10:20:19] [INFO] Reiniciando aplicação...
+[19/07/2026 10:20:19] [INFO] Encerrando aplicação...
+[19/07/2026 10:20:19] [INFO] Iniciando main.py
+[19/07/2026 10:20:19] [SUCCESS] Kivy iniciado | PID: 24408
+[19/07/2026 10:20:21] [WARNING] Aplicação encerrada.
+[19/07/2026 10:20:21] [INFO] Encerrando ambiente...
+[19/07/2026 10:20:21] [SUCCESS] Watcher encerrado.
+[19/07/2026 10:20:21] [SUCCESS] Ambiente encerrado.

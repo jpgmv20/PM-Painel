@@ -1,198 +1,71 @@
-"""
-widgets.py
+"""Registro opcional de widgets usados pela aplicação Kivy."""
 
-Registro de widgets Kivy ativos.
+from __future__ import annotations
 
-Responsável por:
-
-- Registrar widgets criados
-- Encontrar widgets por classe
-- Atualizar canvas
-- Preparar reconstrução futura
-"""
-
-
-from weakref import WeakSet
-
+from weakref import WeakValueDictionary
 
 from devtools.logger import Logger
 
 
+class WidgetManager:
+    """Guarda referências fracas, sem impedir a destruição de telas antigas."""
 
-class WidgetRegistry:
+    def __init__(self) -> None:
+        self._widgets: WeakValueDictionary[str, object] = WeakValueDictionary()
 
+    def register(self, widget: object, name: str | object | None = None) -> str:
+        """Registra ``widget`` e devolve seu nome.
 
-    def __init__(self):
+        Aceita tanto ``register(widget)`` quanto a forma antiga
+        ``register('nome', widget)`` para não quebrar telas já existentes.
+        """
+        if isinstance(widget, str) and name is not None:
+            key, target = widget, name
+        else:
+            target = widget
+            key = str(name) if isinstance(name, str) else f"{type(target).__name__}:{id(target)}"
+        try:
+            self._widgets[key] = target  # type: ignore[assignment]
+        except TypeError:
+            Logger.warning(f"Widget não pode ser registrado por referência fraca: {key}")
+            return key
+        Logger.debug(f"Widget registrado: {key}")
+        return key
 
-        self.widgets = WeakSet()
+    def unregister(self, widget_or_name: object) -> None:
+        if isinstance(widget_or_name, str):
+            self._widgets.pop(widget_or_name, None)
+            return
+        for key, widget in tuple(self._widgets.items()):
+            if widget is widget_or_name:
+                self._widgets.pop(key, None)
 
+    def get(self, name: str) -> object | None:
+        return self._widgets.get(name)
 
-
-    # =====================================================
-    # Registrar widget
-    # =====================================================
-
-
-    def register(
-        self,
-        widget
-    ):
-
-
-        self.widgets.add(
-            widget
-        )
-
-
-        Logger.debug(
-            f"Widget registrado: "
-            f"{widget.__class__.__name__}"
-        )
-
-
-
-    # =====================================================
-    # Remover widget
-    # =====================================================
-
-
-    def unregister(
-        self,
-        widget
-    ):
-
-
-        if widget in self.widgets:
-
-
-            self.widgets.remove(
-                widget
-            )
-
-
-
-    # =====================================================
-    # Todos widgets
-    # =====================================================
-
-
-    def all(self):
-
-        return list(
-            self.widgets
-        )
-
-
-
-    # =====================================================
-    # Procurar por classe
-    # =====================================================
-
-
-    def find(
-        self,
-        class_name
-    ):
-
-
-        result = []
-
-
-        for widget in self.widgets:
-
-
-            if (
-                widget.__class__.__name__
-                ==
-                class_name
-            ):
-
-                result.append(
-                    widget
-                )
-
-
-        return result
-
-
-
-    # =====================================================
-    # Atualização visual
-    # =====================================================
-
-
-    def refresh(
-        self
-    ):
-
-
+    def refresh(self) -> int:
         updated = 0
-
-
-
-        for widget in list(
-            self.widgets
-        ):
-
-
+        for name, widget in tuple(self._widgets.items()):
             try:
-
-
-                widget.canvas.ask_update()
-
-
+                canvas = getattr(widget, "canvas", None)
+                if canvas is not None:
+                    canvas.ask_update()
+                callback = getattr(widget, "on_devtools_reload", None)
+                if callable(callback):
+                    callback()
                 updated += 1
+            except Exception as error:
+                Logger.error(f"Erro atualizando widget {name}: {error}")
+        return updated
+
+    def reload(self) -> int:
+        return self.refresh()
+
+    def list(self) -> list[str]:
+        return list(self._widgets.keys())
+
+    def clear(self) -> None:
+        self._widgets.clear()
 
 
-
-            except Exception:
-
-
-                pass
-
-
-
-        Logger.debug(
-            f"{updated} widgets atualizados."
-        )
-
-
-
-    # =====================================================
-    # Chamado pelo HotReload
-    # =====================================================
-
-
-    def reload(
-        self
-    ):
-
-
-        Logger.info(
-            "Atualizando widgets registrados..."
-        )
-
-
-        self.refresh()
-
-
-
-    # =====================================================
-    # Informações
-    # =====================================================
-
-
-    def count(
-        self
-    ):
-
-
-        return len(
-            self.widgets
-        )
-
-
-
-# Instância global
-
-WIDGETS = WidgetRegistry()
+WIDGETS = WidgetManager()

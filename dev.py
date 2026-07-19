@@ -1,93 +1,30 @@
-"""
-dev.py
+"""Ponto de entrada do ambiente de desenvolvimento.
 
-Ponto de entrada do ambiente de desenvolvimento.
-
-Executar:
-
-    python dev.py
+Execute no ambiente virtual do projeto com: ``python dev.py``.
 """
 
+from __future__ import annotations
 
 import traceback
 
-
+from devtools.events import EVENTS
 from devtools.logger import Logger
 from devtools.runner import DevelopmentRunner
-from devtools.events import EVENTS
 
 
-
-def handle_exception(error):
-
-    Logger.error(
-        "Erro não tratado no ambiente."
-    )
-
-    Logger.error(
-        str(error)
-    )
-
-
-    traceback.print_exc()
-
-
-    EVENTS.emit(
-        "error",
-        error
-    )
-
-
-
-def main():
-
+def main() -> None:
+    Logger.setup()
+    Logger.banner()
+    runner = DevelopmentRunner()
+    EVENTS.emit("before_start", runner)
     try:
-
-        Logger.setup()
-
-        Logger.banner()
-
-
-        runner = DevelopmentRunner()
-
-
-        EVENTS.emit(
-            "before_start",
-            runner
-        )
-
-
         runner.start()
-
-
-
-    except KeyboardInterrupt:
-
-
-        Logger.warning(
-            "Execução interrompida pelo usuário."
-        )
-
-
-
     except Exception as error:
-
-
-        handle_exception(
-            error
-        )
-
-
-
-    finally:
-
-
-        EVENTS.emit(
-            "shutdown"
-        )
-
+        Logger.error(f"Erro não tratado no ambiente: {error}")
+        traceback.print_exc()
+        EVENTS.emit("error", error)
+        runner.shutdown()
 
 
 if __name__ == "__main__":
-
     main()

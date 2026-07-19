@@ -1,275 +1,79 @@
-"""
-logger.py
+"""Registro simples, seguro para threads e legível no terminal."""
 
-Sistema de logs do framework.
+from __future__ import annotations
 
-Responsável por:
-
-- Logs no terminal
-- Arquivo de histórico
-- Níveis de mensagem
-- Histórico em memória
-"""
-
-
+from collections import deque
 from datetime import datetime
 from pathlib import Path
-
+from threading import RLock
 
 from devtools.config import CONFIG
 
 
-
 class Logger:
-
-
-    history = []
-
-
-    log_directory = (
-        Path.cwd()
-        /
-        ".pm_logs"
-    )
-
-
-    log_file = (
-        log_directory
-        /
-        "development.log"
-    )
-
-
-
-    # =====================================================
-    # Inicialização
-    # =====================================================
-
+    _lock = RLock()
+    _history: deque[str] = deque(maxlen=500)
+    _log_file: Path | None = None
 
     @classmethod
-    def setup(cls):
-
-        cls.log_directory.mkdir(
-            exist_ok=True
-        )
-
-
-
-    # =====================================================
-    # Escrita principal
-    # =====================================================
-
+    def setup(cls) -> None:
+        if not CONFIG.save_logs:
+            return
+        CONFIG.logs_path.mkdir(parents=True, exist_ok=True)
+        cls._log_file = CONFIG.logs_path / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.log"
 
     @classmethod
-    def write(
-        cls,
-        level,
-        message
-    ):
-
-
-        cls.setup()
-
-
-        now = datetime.now()
-
-
-        text = (
-            f"[{now:%d/%m/%Y %H:%M:%S}] "
-            f"[{level}] "
-            f"{message}"
-        )
-
-
-        cls.history.append(
-            text
-        )
-
-
-        try:
-
-
-            with open(
-                cls.log_file,
-                "a",
-                encoding="utf-8"
-            ) as file:
-
-
-                file.write(
-                    text + "\n"
-                )
-
-
-        except Exception:
-
-
-            pass
-
-
-
-        print(
-            text
-        )
-
-
-
-    # =====================================================
-    # Níveis
-    # =====================================================
-
+    def _write(cls, level: str, message: object) -> None:
+        line = f"[{datetime.now():%d/%m/%Y %H:%M:%S}] [{level}] {message}"
+        with cls._lock:
+            print(line, flush=True)
+            cls._history.append(line)
+            if cls._log_file is not None:
+                try:
+                    with cls._log_file.open("a", encoding="utf-8") as log_file:
+                        log_file.write(f"{line}\n")
+                except OSError as error:
+                    print(f"[LOGGER] Não foi possível gravar o log: {error}", flush=True)
 
     @classmethod
-    def debug(
-        cls,
-        message
-    ):
-
-
-        if CONFIG.debug:
-
-
-            cls.write(
-                "DEBUG",
-                message
-            )
-
-
+    def debug(cls, message: object) -> None:
+        if CONFIG.enable_debug:
+            cls._write("DEBUG", message)
 
     @classmethod
-    def info(
-        cls,
-        message
-    ):
-
-
-        cls.write(
-            "INFO",
-            message
-        )
-
-
+    def info(cls, message: object) -> None:
+        cls._write("INFO", message)
 
     @classmethod
-    def success(
-        cls,
-        message
-    ):
-
-
-        cls.write(
-            "SUCCESS",
-            message
-        )
-
-
+    def success(cls, message: object) -> None:
+        cls._write("SUCCESS", message)
 
     @classmethod
-    def warning(
-        cls,
-        message
-    ):
-
-
-        cls.write(
-            "WARNING",
-            message
-        )
-
-
+    def warning(cls, message: object) -> None:
+        cls._write("WARNING", message)
 
     @classmethod
-    def error(
-        cls,
-        message
-    ):
-
-
-        cls.write(
-            "ERROR",
-            message
-        )
-
-
-
-    # =====================================================
-    # Interface
-    # =====================================================
-
+    def error(cls, message: object) -> None:
+        cls._write("ERROR", message)
 
     @classmethod
-    def separator(cls):
-
-        print(
-            "-" * 60
-        )
-
-
+    def banner(cls) -> None:
+        print("\n" + "=" * 60)
+        print("                 PM-PAINEL DEV")
+        print("          Ambiente de desenvolvimento Kivy")
+        print("=" * 60 + "\n", flush=True)
 
     @classmethod
-    def banner(cls):
-
-        print(
-            """
-============================================================
-
-                    PM-PAINEL DEV
-
-             Kivy Development Environment
-
-============================================================
-"""
-        )
-
-
-
-    @classmethod
-    def box(
-        cls,
-        title,
-        *lines
-    ):
-
-
-        cls.separator()
-
-
-        print(
-            f"| {title}"
-        )
-
-
-        cls.separator()
-
-
+    def box(cls, title: str, *lines: object) -> None:
+        width = 60
+        print("\n" + "=" * width)
+        print(title.center(width))
+        print("=" * width)
         for line in lines:
-
-            print(
-                f"| {line}"
-            )
-
-
-        cls.separator()
-
-
-
-    # =====================================================
-    # Histórico
-    # =====================================================
-
+            print(line)
+        print("=" * width + "\n", flush=True)
 
     @classmethod
-    def last(
-        cls,
-        amount=10
-    ):
-
-
-        return cls.history[-amount:]
-
-
-
-    @classmethod
-    def clear_history(cls):
-
-        cls.history.clear()
+    def last(cls, amount: int = 20) -> list[str]:
+        with cls._lock:
+            return list(cls._history)[-max(0, amount):]

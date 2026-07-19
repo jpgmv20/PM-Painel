@@ -1,241 +1,93 @@
-"""
-process.py
+"""Execução e encerramento confiável do processo da aplicação Kivy."""
 
-Gerenciador do processo principal do Kivy.
+from __future__ import annotations
 
-Responsável por:
-
-- Iniciar aplicação
-- Encerrar aplicação
-- Reiniciar automaticamente
-- Controlar PID
-- Integrar com o estado global
-"""
-
-
+import os
 import subprocess
 import sys
-import time
-
-
 from pathlib import Path
-
+from threading import RLock, Thread
 
 from devtools.logger import Logger
 
 
-
 class ProcessManager:
-
-
-    def __init__(
-        self,
-        main_file: Path,
-        state
-    ):
-
-
-        self.main_file = main_file
-
+    def __init__(self, main_file: Path, project_root: Path, state) -> None:
+        self.main_file = Path(main_file).resolve()
+        self.project_root = Path(project_root).resolve()
         self.state = state
+        self.process: subprocess.Popen[str] | None = None
+        self._lock = RLock()
+        self._stdout_thread: Thread | None = None
 
-
-        self.process = None
-
-
-
-    # =====================================================
-    # Iniciar
-    # =====================================================
-
-
-    def start(self):
-
-
-        if self.process:
-
-            Logger.warning(
-                "Processo já está em execução."
-            )
-
-            return
-
-
-
-        try:
-
-
-            self.process = subprocess.Popen(
-
-                [
-                    sys.executable,
-                    str(self.main_file)
-                ],
-
-                stdout=subprocess.PIPE,
-
-                stderr=subprocess.STDOUT,
-
-                text=True,
-
-                bufsize=1
-
-            )
-
-
-            self.state.register_process(
-                self.process.pid
-            )
-
-
-            Logger.success(
-                f"Kivy iniciado | PID: {self.process.pid}"
-            )
-
-
-
-        except Exception as error:
-
-
-            Logger.error(
-                f"Erro iniciando aplicação: {error}"
-            )
-
-
-
-    # =====================================================
-    # Parar
-    # =====================================================
-
-
-    def stop(self):
-
-
-        if not self.process:
-
-
-            return
-
-
-
-        try:
-
-
-            Logger.info(
-                "Encerrando aplicação..."
-            )
-
-
-            self.process.terminate()
-
-
-
+    def start(self) -> bool:
+        with self._lock:
+            if self.running():
+                return False
+            Logger.info(f"Iniciando {self.main_file.name}")
+            environment = os.environ.copy()
+            environment["PYTHONUNBUFFERED"] = "1"
             try:
-
-
-                self.process.wait(
-                    timeout=3
+                process = subprocess.Popen(
+                    [sys.executable, "-u", str(self.main_file)],
+                    cwd=str(self.project_root),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    bufsize=1,
+                    env=environment,
                 )
-
-
-            except subprocess.TimeoutExpired:
-
-
-                self.process.kill()
-
-
-
-        except Exception as error:
-
-
-            Logger.error(
-                f"Erro encerrando processo: {error}"
+            except OSError as error:
+                Logger.error(f"Não foi possível iniciar a aplicação: {error}")
+                return False
+            self.process = process
+            self.state.register_process(process.pid)
+            self._stdout_thread = Thread(
+                target=self._read_output, args=(process,), name="pm-app-output", daemon=True
             )
+            self._stdout_thread.start()
+            Logger.success(f"Aplicação iniciada | PID: {process.pid}")
+            return True
 
-
-
-        finally:
-
-
-            self.process = None
-
-
-            self.state.stop_process()
-
-
-
-    # =====================================================
-    # Reiniciar
-    # =====================================================
-
-
-    def restart(self):
-
-
-        Logger.info(
-            "Reiniciando aplicação..."
-        )
-
-
-        self.stop()
-
-
-
-        time.sleep(
-            0.2
-        )
-
-
-        self.state.register_restart()
-
-
-
-        self.start()
-
-
-
-    # =====================================================
-    # Status
-    # =====================================================
-
-
-    def running(self):
-
-
-        if not self.process:
-
-            return False
-
-
-
-        return (
-            self.process.poll()
-            is
-            None
-        )
-
-
-
-    # =====================================================
-    # Saída do processo
-    # =====================================================
-
-
-    def read_output(self):
-
-
-        if not self.process:
-
+    def _read_output(self, process: subprocess.Popen[str]) -> None:
+        stream = process.stdout
+        if stream is None:
             return
+        try:
+            for line in iter(stream.readline, ""):
+                print(line.rstrip(), flush=True)
+        except (OSError, ValueError) as error:
+            Logger.debug(f"Leitura da saída encerrada: {error}")
+        finally:
+            stream.close()
+            process.wait()
+            self.state.stop_process(process.pid)
 
+    def running(self) -> bool:
+        with self._lock:
+            return self.process is not None and self.process.poll() is None
 
+    def stop(self) -> None:
+        with self._lock:
+            process = self.process
+            self.process = None
+        if process is None:
+            return
+        if process.poll() is None:
+            Logger.info("Encerrando aplicação...")
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                Logger.warning("A aplicação não encerrou a tempo; finalizando processo.")
+                process.kill()
+                process.wait(timeout=5)
+        self.state.stop_process(process.pid)
 
-        if self.process.stdout:
-
-
-            for line in self.process.stdout:
-
-
-                Logger.info(
-                    line.rstrip()
-                )
+    def restart(self) -> bool:
+        with self._lock:
+            self.stop()
+            self.state.register_restart()
+            return self.start()

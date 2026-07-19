@@ -1,0 +1,130 @@
+[19/07/2026 11:00:28] [DEBUG] Evento emitido: before_start
+[19/07/2026 11:00:28] [DEBUG] Comando registrado: status
+[19/07/2026 11:00:28] [DEBUG] Comando registrado: reload
+[19/07/2026 11:00:28] [DEBUG] Comando registrado: restart
+[19/07/2026 11:00:28] [DEBUG] Comando registrado: plugins
+[19/07/2026 11:00:28] [DEBUG] Comando registrado: logs
+[19/07/2026 11:00:28] [DEBUG] Comando registrado: profile
+[19/07/2026 11:00:28] [DEBUG] Comando registrado: help
+[19/07/2026 11:00:28] [DEBUG] Comando registrado: stop
+[19/07/2026 11:00:28] [DEBUG] Comando registrado: exit
+[19/07/2026 11:00:28] [DEBUG] Listener registrado: file_changed
+[19/07/2026 11:00:28] [SUCCESS] Plugin carregado: logger_plugin
+[19/07/2026 11:00:28] [DEBUG] Listener registrado: after_reload
+[19/07/2026 11:00:28] [DEBUG] Listener registrado: shutdown
+[19/07/2026 11:00:28] [SUCCESS] Plugin carregado: teste
+[19/07/2026 11:00:28] [DEBUG] Listener registrado: file_changed
+[19/07/2026 11:00:28] [SUCCESS] Recarga automática pronta (reinício ao salvar arquivos).
+[19/07/2026 11:00:28] [INFO] Iniciando main.py
+[19/07/2026 11:00:28] [SUCCESS] Aplicação iniciada | PID: 1064
+[19/07/2026 11:00:28] [SUCCESS] Watcher iniciado.
+[19/07/2026 11:00:28] [SUCCESS] Console iniciado. Digite 'help' para ver os comandos.
+[19/07/2026 11:00:28] [SUCCESS] Inicialização do DevTools: 0.030s
+[19/07/2026 11:00:28] [DEBUG] Evento emitido: app_started
+[19/07/2026 11:00:28] [SUCCESS] Ambiente iniciado.
+[19/07/2026 11:00:34] [DEBUG] Evento emitido: file_changed
+[19/07/2026 11:00:34] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 11:00:34] [DEBUG] Evento emitido: before_reload
+[19/07/2026 11:00:34] [INFO] Recarga agendada: modified: main.kv
+[19/07/2026 11:00:34] [INFO] Reiniciando aplicação (modified: main.kv).
+[19/07/2026 11:00:34] [INFO] Encerrando aplicação...
+[19/07/2026 11:00:34] [INFO] Iniciando main.py
+[19/07/2026 11:00:34] [SUCCESS] Aplicação iniciada | PID: 19968
+[19/07/2026 11:00:34] [DEBUG] Evento emitido: after_reload
+[19/07/2026 11:00:42] [DEBUG] Evento emitido: file_changed
+[19/07/2026 11:00:42] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 11:00:42] [DEBUG] Evento emitido: before_reload
+[19/07/2026 11:00:42] [INFO] Recarga agendada: modified: main.kv
+[19/07/2026 11:00:43] [INFO] Reiniciando aplicação (modified: main.kv).
+[19/07/2026 11:00:43] [INFO] Encerrando aplicação...
+[19/07/2026 11:00:43] [INFO] Iniciando main.py
+[19/07/2026 11:00:43] [SUCCESS] Aplicação iniciada | PID: 25992
+[19/07/2026 11:00:43] [DEBUG] Evento emitido: after_reload
+[19/07/2026 18:06:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:06:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:06:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:06:40] [INFO] Recarga agendada: modified: main.kv
+[19/07/2026 18:06:40] [INFO] Reiniciando aplicação (modified: main.kv).
+[19/07/2026 18:06:40] [INFO] Encerrando aplicação...
+[19/07/2026 18:06:40] [INFO] Iniciando main.py
+[19/07/2026 18:06:40] [SUCCESS] Aplicação iniciada | PID: 20624
+[19/07/2026 18:06:40] [DEBUG] Evento emitido: after_reload
+[19/07/2026 18:06:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:06:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:06:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:06:40] [INFO] Recarga agendada: modified: main.py
+[19/07/2026 18:06:40] [INFO] Reiniciando aplicação (modified: main.py).
+[19/07/2026 18:06:40] [INFO] Encerrando aplicação...
+[19/07/2026 18:06:40] [INFO] Iniciando main.py
+[19/07/2026 18:06:40] [SUCCESS] Aplicação iniciada | PID: 11608
+[19/07/2026 18:06:40] [DEBUG] Evento emitido: after_reload
+[19/07/2026 18:07:37] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:37] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:37] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:37] [INFO] Recarga agendada: modified: dev.py
+[19/07/2026 18:07:37] [INFO] Reiniciando aplicação (modified: dev.py).
+[19/07/2026 18:07:37] [INFO] Encerrando aplicação...
+[19/07/2026 18:07:37] [INFO] Iniciando main.py
+[19/07/2026 18:07:37] [SUCCESS] Aplicação iniciada | PID: 3376
+[19/07/2026 18:07:37] [DEBUG] Evento emitido: after_reload
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:39] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:39] [INFO] Recarga agendada: modified: commands.py
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:39] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:39] [INFO] Recarga agendada: modified: config.py
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:39] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:39] [INFO] Recarga agendada: modified: console.py
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:39] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:39] [INFO] Recarga agendada: modified: events.py
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:39] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:39] [INFO] Recarga agendada: modified: hotreload.py
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:39] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:39] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:39] [INFO] Recarga agendada: modified: logger.py
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:40] [INFO] Recarga agendada: modified: plugins.py
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:40] [INFO] Recarga agendada: modified: process.py
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:40] [INFO] Recarga agendada: modified: profiler.py
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:40] [INFO] Recarga agendada: modified: runner.py
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:40] [INFO] Recarga agendada: modified: state.py
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:40] [INFO] Recarga agendada: modified: validator.py
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:40] [INFO] Recarga agendada: modified: watcher.py
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: file_changed
+[19/07/2026 18:07:40] [ERROR] Erro no listener 'file_changed': log_reload() takes 1 positional argument but 2 were given
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: before_reload
+[19/07/2026 18:07:40] [INFO] Recarga agendada: modified: widgets.py
+[19/07/2026 18:07:40] [INFO] Reiniciando aplicação (modified: widgets.py).
+[19/07/2026 18:07:40] [INFO] Encerrando aplicação...
+[19/07/2026 18:07:40] [INFO] Iniciando main.py
+[19/07/2026 18:07:40] [SUCCESS] Aplicação iniciada | PID: 25252
+[19/07/2026 18:07:40] [DEBUG] Evento emitido: after_reload

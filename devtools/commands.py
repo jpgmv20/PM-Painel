@@ -1,307 +1,85 @@
-"""
-commands.py
+"""Comandos disponíveis no console do DevTools."""
 
-Sistema de comandos internos.
+from __future__ import annotations
 
-Permite criar comandos
-executados pelo console do framework.
-
-Exemplo:
-
-PM> status
-PM> reload
-PM> plugins
-"""
-
+import shlex
+from collections.abc import Callable
 
 from devtools.logger import Logger
 
 
-
 class CommandManager:
-
-
-    def __init__(
-        self,
-        runner
-    ):
-
-
+    def __init__(self, runner) -> None:
         self.runner = runner
+        self.commands: dict[str, tuple[Callable, str]] = {}
 
+    def register(self, name: str, callback: Callable, description: str) -> None:
+        normalized = name.casefold()
+        self.commands[normalized] = (callback, description)
+        Logger.debug(f"Comando registrado: {normalized}")
 
-        self.commands = {}
+    def register_default(self) -> None:
+        self.register("status", self.status, "Mostra o estado da aplicação.")
+        self.register("reload", self.reload, "Reinicia a aplicação agora.")
+        self.register("restart", self.reload, "Alias de reload.")
+        self.register("plugins", self.plugins, "Lista os plugins carregados.")
+        self.register("logs", self.logs, "Mostra logs recentes; opcionalmente: logs 50.")
+        self.register("profile", self.profile, "Mostra tempos do ambiente.")
+        self.register("help", self.help, "Mostra os comandos disponíveis.")
+        self.register("stop", self.stop, "Encerra o DevTools.")
+        self.register("exit", self.stop, "Alias de stop.")
 
-
-
-    # =====================================================
-    # Registrar comando
-    # =====================================================
-
-
-    def register(
-        self,
-        name,
-        callback,
-        description=""
-    ):
-
-
-        self.commands[name] = {
-
-
-            "callback": callback,
-
-
-            "description": description
-
-
-        }
-
-
-
-        Logger.debug(
-            f"Comando registrado: {name}"
-        )
-
-
-
-    # =====================================================
-    # Executar comando
-    # =====================================================
-
-
-    def execute(
-        self,
-        command
-    ):
-
-
-        parts = command.split()
-
-
-        if not parts:
-
-            return
-
-
-
-        name = parts[0]
-
-
-        args = parts[1:]
-
-
-
-        if name not in self.commands:
-
-
-            Logger.warning(
-                f"Comando desconhecido: {name}"
-            )
-
-
-            return
-
-
-
+    def execute(self, command: str) -> None:
         try:
-
-
-            result = self.commands[name][
-                "callback"
-            ](
-                *args
-            )
-
-
-
-            return result
-
-
-
+            parts = shlex.split(command, posix=False)
+        except ValueError as error:
+            Logger.warning(f"Comando inválido: {error}")
+            return
+        if not parts:
+            return
+        name, *args = parts
+        item = self.commands.get(name.casefold())
+        if item is None:
+            Logger.warning(f"Comando desconhecido: {name}. Digite 'help'.")
+            return
+        callback, _ = item
+        try:
+            callback(*args)
+        except TypeError:
+            Logger.warning(f"Uso inválido para '{name}'. Digite 'help'.")
         except Exception as error:
+            Logger.error(f"Erro executando comando '{name}': {error}")
 
-
-            Logger.error(
-                f"Erro executando comando {name}: {error}"
-            )
-
-
-
-    # =====================================================
-    # Comandos padrão
-    # =====================================================
-
-
-    def register_default(self):
-
-
-        self.register(
-
-            "status",
-
-            self.status,
-
-            "Mostra estado da aplicação"
-
-        )
-
-
-
-        self.register(
-
-            "reload",
-
-            self.reload,
-
-            "Recarrega aplicação"
-
-        )
-
-
-
-        self.register(
-
-            "plugins",
-
-            self.plugins,
-
-            "Lista plugins ativos"
-
-        )
-
-
-
-        self.register(
-
-            "logs",
-
-            self.logs,
-
-            "Mostra últimos logs"
-
-        )
-
-
-
-        self.register(
-
-            "profile",
-
-            self.profile,
-
-            "Mostra dados de desempenho"
-
-        )
-
-
-
-    # =====================================================
-    # Implementações
-    # =====================================================
-
-
-    def status(self):
-
-
-        state = self.runner.state
-
-
-
+    def status(self) -> None:
+        state = self.runner.state.as_dict()
         Logger.box(
-
             "STATUS",
-
-            f"Processo: {state.process_running}",
-
-            f"PID: {state.process_id}",
-
-            f"Reloads: {state.watcher_reload_count}",
-
-            f"Restarts: {state.process_restart_count}"
-
+            f"PID: {state['pid']}", f"Executando: {state['running']}",
+            f"Reinícios: {state['restarts']}", f"Recargas: {state['reloads']}",
+            f"Arquivos alterados: {state['files_changed']}",
         )
 
+    def reload(self) -> None:
+        self.runner.hotreload.reload_now()
 
+    def plugins(self) -> None:
+        names = self.runner.plugins.list() or ["Nenhum plugin carregado."]
+        Logger.box("PLUGINS", *names)
 
-    def reload(self):
+    def logs(self, amount: str = "20") -> None:
+        try:
+            quantity = max(1, min(int(amount), 500))
+        except ValueError:
+            Logger.warning("Quantidade de logs deve ser um número.")
+            return
+        for line in Logger.last(quantity):
+            print(line, flush=True)
 
+    def profile(self) -> None:
+        self.runner.profiler.print_report()
 
-        self.runner.restart()
+    def help(self) -> None:
+        Logger.box("COMANDOS", *(f"{name} — {item[1]}" for name, item in sorted(self.commands.items())))
 
-
-
-    def plugins(self):
-
-
-        plugins = (
-            self.runner.plugins.list()
-        )
-
-
-        Logger.box(
-
-            "PLUGINS",
-
-            *plugins
-
-        )
-
-
-
-    def logs(self):
-
-
-        for log in Logger.last():
-
-            print(log)
-
-
-
-    def profile(self):
-
-
-        data = (
-            self.runner.profiler.report()
-        )
-
-
-        Logger.box(
-
-            "PROFILE",
-
-            *[
-                f"{k}: {v:.4f}s"
-
-                for k, v in data.items()
-
-            ]
-
-        )
-
-
-
-    # =====================================================
-    # Ajuda
-    # =====================================================
-
-
-    def help(self):
-
-
-        Logger.box(
-
-            "COMMANDS",
-
-            *[
-
-                f"{name} - {data['description']}"
-
-                for name, data
-
-                in self.commands.items()
-
-            ]
-
-        )
+    def stop(self) -> None:
+        self.runner.shutdown()

@@ -1,150 +1,40 @@
-"""
-console.py
+"""Console opcional que não interfere em execuções sem terminal interativo."""
 
-Terminal interativo do framework.
+from __future__ import annotations
 
-Permite executar comandos:
+import sys
+from threading import Thread
 
-PM> status
-PM> reload
-PM> plugins
-PM> logs
-"""
-
-
-import threading
-
-
+from devtools.config import CONFIG
 from devtools.logger import Logger
 
 
-
 class DevelopmentConsole:
-
-
-    def __init__(
-        self,
-        commands
-    ):
-
-
+    def __init__(self, commands) -> None:
         self.commands = commands
-
-
         self.running = False
+        self.thread: Thread | None = None
 
-
-        self.thread = None
-
-
-
-    # =====================================================
-    # Iniciar console
-    # =====================================================
-
-
-    def start(self):
-
-
+    def start(self) -> bool:
+        if not CONFIG.enable_console or not sys.stdin or not sys.stdin.isatty():
+            Logger.debug("Console interativo indisponível nesta execução.")
+            return False
         if self.running:
-
-            return
-
-
-
+            return False
         self.running = True
-
-
-
-        self.thread = threading.Thread(
-
-            target=self.loop,
-
-            daemon=True
-
-        )
-
-
-
+        self.thread = Thread(target=self._loop, name="pm-dev-console", daemon=True)
         self.thread.start()
+        Logger.success("Console iniciado. Digite 'help' para ver os comandos.")
+        return True
 
-
-
-        Logger.success(
-            "Console iniciado."
-        )
-
-
-
-    # =====================================================
-    # Loop principal
-    # =====================================================
-
-
-    def loop(self):
-
-
+    def _loop(self) -> None:
         while self.running:
-
-
             try:
-
-
-                command = input(
-                    "\nPM> "
-                )
-
-
-
-                if command.strip() == "":
-
-                    continue
-
-
-
-                if command == "exit":
-
-
-                    self.stop()
-
-
-                    break
-
-
-
-                self.commands.execute(
-                    command
-                )
-
-
-
-            except EOFError:
-
-
+                command = input(CONFIG.console_prompt)
+            except (EOFError, KeyboardInterrupt):
                 break
-
-
-
-            except Exception as error:
-
-
-                Logger.error(
-                    f"Erro no console: {error}"
-                )
-
-
-
-    # =====================================================
-    # Parar
-    # =====================================================
-
-
-    def stop(self):
-
-
+            self.commands.execute(command)
         self.running = False
 
-
-        Logger.info(
-            "Console encerrado."
-        )
+    def stop(self) -> None:
+        self.running = False

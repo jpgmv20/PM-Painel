@@ -246,3 +246,20 @@ AttributeError: 'NoneType' object has no attribute 'bind'
 [19/07/2026 09:19:27] [DEBUG] Evento emitido: app_started
 [19/07/2026 09:19:27] [SUCCESS] Ambiente iniciado.
 [19/07/2026 09:19:27] [DEBUG] Evento emitido: shutdown
+[19/07/2026 09:54:17] [DEBUG] Evento emitido: before_start
+[19/07/2026 09:54:17] [INFO] Inicializando ambiente...
+[19/07/2026 09:54:17] [DEBUG] Listener registrado: file_changed
+[19/07/2026 09:54:17] [DEBUG] Comando registrado: status
+[19/07/2026 09:54:17] [DEBUG] Comando registrado: reload
+[19/07/2026 09:54:17] [DEBUG] Comando registrado: plugins
+[19/07/2026 09:54:17] [DEBUG] Comando registrado: logs
+[19/07/2026 09:54:17] [DEBUG] Comando registrado: profile
+[19/07/2026 09:54:17] [DEBUG] Listener registrado: file_changed
+[19/07/2026 09:54:17] [SUCCESS] Plugin carregado: logger_plugin
+[19/07/2026 09:54:17] [SUCCESS] Plugin carregado: teste
+[19/07/2026 09:54:17] [ERROR] Erro não tratado no ambiente.
+[19/07/2026 09:54:17] [ERROR] 'HotReloadManager' object has no attribute 'register_events'
+[19/07/2026 09:54:17] [DEBUG] Evento emitido: error
+[19/07/2026 09:54:17] [DEBUG] Evento emitido: shutdown
+[19/07/2026 10:07:38] [DEBUG] Widget registrado: TelaPrincipal
+[19/07/2026 10:08:03] [DEBUG] Widget registrado: TelaPrincipal

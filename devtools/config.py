@@ -1,221 +1,62 @@
-"""
-config.py
+"""Configuração central do ambiente de desenvolvimento."""
 
-Configurações globais do ambiente de desenvolvimento.
-"""
+from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
+
+def _project_root() -> Path:
+    """Retorna a pasta do projeto, independentemente do diretório do terminal."""
+    return Path(__file__).resolve().parent.parent
 
 
 @dataclass(slots=True)
 class DevelopmentConfig:
+    """Opções usadas por ``python dev.py``."""
 
-
-    # =====================================================
-    # Projeto
-    # =====================================================
-
-    project_name: str = "PM-Painel"
-
+    project_root: Path = field(default_factory=_project_root)
     main_file: str = "main.py"
 
-    project_root: Path = Path.cwd()
-
-
-
-    # =====================================================
-    # Watcher
-    # =====================================================
-
-    recursive: bool = True
-
-    debounce: float = 0.60
-
-
-
-    # =====================================================
-    # Arquivos monitorados
-    # =====================================================
-
-    watched_extensions: tuple[str, ...] = (
-
-        ".py",
-
-        ".kv",
-
-        ".json",
-
-        ".yaml",
-
-        ".yml",
-
-        ".ini",
-
-        ".cfg",
-
-        ".txt",
-
-        ".toml",
-
-        ".env",
-
+    debounce_time: float = 0.35
+    restart_delay: float = 0.15
+    watch_extensions: tuple[str, ...] = (
+        ".py", ".kv", ".json", ".yaml", ".yml", ".ini", ".toml",
     )
-
-
-
-    # =====================================================
-    # Pastas ignoradas
-    # =====================================================
-
     ignored_directories: tuple[str, ...] = (
-
-        "__pycache__",
-
-        ".git",
-
-        ".github",
-
-        ".idea",
-
-        ".vscode",
-
-        ".venv",
-
-        "venv",
-
-        "kivy_venv",
-
-        ".pytest_cache",
-
-        ".mypy_cache",
-
-        ".ruff_cache",
-
-        "build",
-
-        "dist",
-
-        "site-packages",
-
+        ".git", ".idea", ".vscode", ".pytest_cache", ".mypy_cache",
+        "__pycache__", "build", "dist", ".venv", "venv", "kivy_venv",
+        "site-packages", "logs", ".pm_logs",
     )
 
-
-
-    # =====================================================
-    # Arquivos ignorados
-    # =====================================================
-
-    ignored_files: tuple[str, ...] = (
-
-        ".DS_Store",
-
-        "Thumbs.db",
-
-    )
-
-
-
-    # =====================================================
-    # Processo
-    # =====================================================
-
-    restart_delay: float = 0.20
-
-    process_timeout: float = 3.0
-
-
-
-    # =====================================================
-    # Terminal
-    # =====================================================
-
-    clear_console: bool = True
-
-    show_banner: bool = True
-
-    colored_logs: bool = True
-
-
-
-    # =====================================================
-    # Desenvolvimento
-    # =====================================================
-
-    debug: bool = True
-
-    auto_restart: bool = True
-
-    hot_reload: bool = True
-
-    validate_before_restart: bool = True
-
-
-
-    # =====================================================
-    # Recursos avançados
-    # =====================================================
-
-    profile_startup: bool = True
-
-    profile_memory: bool = False
-
-    profile_cpu: bool = False
-
-
+    enable_console: bool = True
+    console_prompt: str = "PM> "
     enable_plugins: bool = True
+    plugins_directory: str = "plugins"
+    enable_debug: bool = True
+    save_logs: bool = True
+    log_directory: str = "logs"
 
-    enable_terminal_commands: bool = True
+    @property
+    def main_path(self) -> Path:
+        return self.project_root / self.main_file
 
+    @property
+    def plugins_path(self) -> Path:
+        return self.project_root / self.plugins_directory
 
+    @property
+    def logs_path(self) -> Path:
+        return self.project_root / self.log_directory
 
-    # =====================================================
-    # Funções auxiliares
-    # =====================================================
+    def is_ignored_directory(self, name: str) -> bool:
+        return name.casefold() in {item.casefold() for item in self.ignored_directories}
 
-    def is_valid_extension(
-        self,
-        suffix: str
-    ) -> bool:
+    def should_watch(self, path: Path) -> bool:
+        """Informa se um caminho relativo ao projeto deve disparar uma recarga."""
+        if path.suffix.casefold() not in self.watch_extensions:
+            return False
+        return not any(self.is_ignored_directory(part) for part in path.parts)
 
-
-        return (
-            suffix.lower()
-            in
-            self.watched_extensions
-        )
-
-
-
-    def is_ignored_directory(
-        self,
-        name: str
-    ) -> bool:
-
-
-        return (
-            name
-            in
-            self.ignored_directories
-        )
-
-
-
-    def is_ignored_file(
-        self,
-        name: str
-    ) -> bool:
-
-
-        return (
-            name
-            in
-            self.ignored_files
-        )
-
-
-
-# Instância global
 
 CONFIG = DevelopmentConfig()
