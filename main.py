@@ -1,13 +1,32 @@
 import json
 import os
+from kivy.config import Config
+
+# -------------------------------------------------------------
+# CONFIGURAÇÕES DA JANELA (DEVE VIR ANTES DOS OUTROS IMPORTS)
+# -------------------------------------------------------------
+# 1. Inicia em tela cheia ('auto' usa a resolução nativa do monitor)
+Config.set('graphics', 'fullscreen', 'auto')
+
+# 2. Fixa a janela (impede redimensionamento)
+Config.set('graphics', 'resizable', '0')
+
 from pathlib import Path
+import shutil
 
 from kivymd.app import MDApp
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from devtools.widgets import WIDGETS
+from kivy.graphics.texture import Texture
+from kivy.properties import ObjectProperty
+from kivy.app import App
+
+
+import model.componentes as componentes
 
 
 if os.environ.get("LOCALAPPDATA"):
@@ -42,28 +61,39 @@ def restore_window_state():
         pass
 
 
-# Carrega o arquivo da subpasta
-caminho_kv = os.path.join(os.path.dirname(__file__), 'view', 'main.kv')
-Builder.load_file(caminho_kv)
+# Diretório base (raiz do projeto)
+base_dir = os.path.dirname(__file__)
 
-class TelaPrincipal(BoxLayout):
+# 1. Primeiro carregamos os componentes (para o Kivy aprender os widgets)
+Builder.load_file(os.path.join(base_dir, 'view', 'componentes.kv'))
 
+# 2. Depois carregamos as telas que serão trocadas dinamicamente
+Builder.load_file(os.path.join(base_dir, 'view', 'main.kv'))
+Builder.load_file(os.path.join(base_dir, 'view', 'login.kv'))
+Builder.load_file(os.path.join(base_dir, 'view', 'home.kv'))
+
+class TelaInicial(componentes.LayoutFundo):
     def __init__(self, **kwargs):
-
         super().__init__(**kwargs)
-
         WIDGETS.register(self)
-        
-    def executar_login(self):
-        usuario = self.ids.login_usuario.text
-        senha = self.ids.login_senha.text
-        print(f"[LOGIN] Usuário: {usuario} | Senha: {senha}")
 
-    def executar_cadastro(self):
-        nome = self.ids.cad_nome.text
-        email = self.ids.cad_email.text
-        senha = self.ids.cad_senha.text
-        print(f"[CADASTRO] Nome: {nome} | Email: {email} | Senha: {senha}")
+    def abrir_MenuPrincipal(self, instance):
+        app = App.get_running_app()
+        manager = app.root
+
+        # Login temporário para testes
+        login = False
+
+        if login:
+            manager.transition = SlideTransition(direction='left', duration=0.35)
+            manager.current = 'principal'
+        else:
+            manager.transition = SlideTransition(direction='down', duration=0.35)
+            manager.current = 'login'
+
+        print(manager.transition.direction)
+        
+    
 
 class MeuApp(MDApp):
 
@@ -72,6 +102,27 @@ class MeuApp(MDApp):
         self._window_save_event = None
         self._window_state_poll = None
         self._last_saved_window_state = None
+        
+        # --- 1. APAGAR UM ARQUIVO ESPECÍFICO ---
+        caminho_arquivo = ""
+
+        if os.path.exists(caminho_arquivo):
+            try:
+                os.remove(caminho_arquivo)
+                print(f"Arquivo '{caminho_arquivo}' removido com sucesso!")
+            except Exception as e:
+                print(f"Erro ao remover arquivo: {e}")
+
+        # --- 2. APAGAR UMA PASTA INTEIRA E SEU CONTEÚDO ---
+        caminho_pasta = "logs"
+
+        if os.path.exists(caminho_pasta):
+            try:
+                # shutil.rmtree apaga a pasta e TUDO que estiver dentro dela
+                shutil.rmtree(caminho_pasta)
+                print(f"Pasta '{caminho_pasta}' removida com sucesso!")
+            except Exception as e:
+                print(f"Erro ao remover pasta: {e}")
 
     def build(self):
         restore_window_state()
@@ -80,7 +131,49 @@ class MeuApp(MDApp):
             self._track_window_state,
             0.5,
         )
-        return TelaPrincipal()
+
+        manager = ScreenManager()
+        manager.transition = SlideTransition(direction='right', duration=0.25)
+
+        tela_inicial_screen = Screen(name='home')
+        tela_inicial_screen.add_widget(TelaInicial())
+        manager.add_widget(tela_inicial_screen)
+
+        tela_login_screen = Screen(name='login')
+        tela_login_screen.add_widget(__import__('model.login', fromlist=['TelaLogin']).TelaLogin())
+        manager.add_widget(tela_login_screen)
+
+        tela_principal_screen = Screen(name='principal')
+        tela_principal_screen.add_widget(__import__('model.home', fromlist=['TelaPrincipal']).TelaPrincipal())
+        manager.add_widget(tela_principal_screen)
+
+        manager.current = 'home'
+        return manager
+    
+    def on_stop(self):
+        """Este método é executado automaticamente quando o app está sendo fechado."""
+        print("Encerrando a aplicação e limpando arquivos temporários...")
+
+        # --- 1. APAGAR UM ARQUIVO ESPECÍFICO ---
+        caminho_arquivo = ""
+
+        if os.path.exists(caminho_arquivo):
+            try:
+                os.remove(caminho_arquivo)
+                print(f"Arquivo '{caminho_arquivo}' removido com sucesso!")
+            except Exception as e:
+                print(f"Erro ao remover arquivo: {e}")
+
+        # --- 2. APAGAR UMA PASTA INTEIRA E SEU CONTEÚDO ---
+        caminho_pasta = ""
+
+        if os.path.exists(caminho_pasta):
+            try:
+                # shutil.rmtree apaga a pasta e TUDO que estiver dentro dela
+                shutil.rmtree(caminho_pasta)
+                print(f"Pasta '{caminho_pasta}' removida com sucesso!")
+            except Exception as e:
+                print(f"Erro ao remover pasta: {e}")
 
     def _schedule_window_save(self, *_):
         if self._window_save_event is not None:

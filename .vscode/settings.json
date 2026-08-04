@@ -1,5 +1,6 @@
 {
     "window.zoomLevel": 0.5,
     "editor.fontSize": 18,
-    "terminal.integrated.defaultProfile.windows": "Command Prompt"
+    "terminal.integrated.defaultProfile.windows": "Command Prompt",
+    "materialkv.pythonFile": "main.py"
 }

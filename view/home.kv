@@ -1,0 +1,48 @@
+<TelaPrincipal>:
+    orientation: 'vertical'
+    spacing: 0
+
+    Cabecalho:
+
+    BoxLayout:
+        # 1. Container invisível que cria a margem (empurra o cartão para o meio)
+        orientation: 'vertical'
+        padding: [60, 20, 60, 20] 
+
+        # 2. O CARTÃO BRANCO FLUTUANTE
+        GridLayout:
+            cols: 3
+            padding: [20, 20, 20, 20] # Margem interna para o texto não colar na borda do cartão
+            
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 0.95
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [18]
+
+            Label:
+                text: "Extenções e Configurações"
+                font_size: 24
+                color: 0, 0, 0, 1
+                halign: 'center'
+                valign: 'middle'
+            
+            Label:
+                text: "Conteudo Teórico e Didatico"
+                font_size: 24
+                color: 0, 0, 0, 1
+                halign: 'center'
+                valign: 'middle'
+            
+            Label:
+                text: "Conteúdo Prático e Funcional"
+                font_size: 24
+                color: 0, 0, 0, 1
+                halign: 'center'
+                valign: 'middle'
+
+    Rodape:
+        size_hint_y: None
+        height: 30
