@@ -1,47 +1,158 @@
+#:import dp kivy.metrics.dp
+
+<AreaNavegador>:
+    orientation: 'vertical'
+    spacing: dp(10)
+    padding: dp(16)
+    size_hint_y: None
+    height: dp(190)
+
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 0.22
+        RoundedRectangle:
+            pos: self.x + dp(6), self.y - dp(6)
+            size: self.size
+            radius: [dp(22)]
+        Color:
+            rgba: 0.06, 0.21, 0.48, 0.98
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(22)]
+
+    Label:
+        text: 'Acessos rápidos'
+        color: 1, 1, 1, 1
+        bold: True
+        font_size: '17sp'
+        size_hint_y: None
+        height: dp(24)
+
+    GridLayout:
+        cols: 7
+        spacing: dp(10)
+
+        AtalhoNavegador:
+            titulo: 'Chrome'
+            icone: 'assets/icon/google.png'
+            disabled: not root.browser_pronto
+            on_release: root.abrir_navegador()
+        AtalhoNavegador:
+            titulo: 'YouTube'
+            icone: 'assets/icon/youtube.png'
+            disabled: not root.browser_pronto
+            on_release: root.abrir_atalho('https://www.youtube.com/')
+        AtalhoNavegador:
+            titulo: 'GitHub'
+            icone: 'assets/icon/github.png'
+            disabled: not root.browser_pronto
+            on_release: root.abrir_atalho('https://github.com/')
+        AtalhoNavegador:
+            titulo: 'Teams'
+            icone: 'assets/icon/teams.png'
+            disabled: not root.browser_pronto
+            on_release: root.abrir_atalho('https://teams.microsoft.com/')
+        AtalhoNavegador:
+            titulo: 'Classroom'
+            icone: 'assets/icon/classroom.png'
+            disabled: not root.browser_pronto
+            on_release: root.abrir_atalho('https://classroom.google.com/')
+        AtalhoNavegador:
+            titulo: 'Outlook'
+            icone: 'assets/icon/outlook.png'
+            disabled: not root.browser_pronto
+            on_release: root.abrir_atalho('https://outlook.office.com/')
+        AtalhoNavegador:
+            titulo: 'Git Bash'
+            icone: 'assets/icon/git.png'
+            disabled: not root.browser_pronto
+            on_release: root.abrir_git_bash()
+
+
+<AtalhoNavegador>:
+    text: ''
+    background_normal: ''
+    background_down: ''
+    background_color: 0, 0, 0, 0
+
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 0.42 if root.hovering else 0.18
+        RoundedRectangle:
+            pos: self.x + dp(3), self.y - (dp(7) if root.hovering else dp(3))
+            size: self.size
+            radius: [dp(14)]
+        Color:
+            rgba: (0.10, 0.33, 0.68, 1) if root.hovering else ((0.04, 0.14, 0.34, 0.92) if self.state == 'normal' else (0.12, 0.37, 0.75, 1))
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+
+    Image:
+        source: root.icone
+        size_hint: None, None
+        size: dp(52), dp(52)
+        pos: root.x + (root.width - self.width) / 2, root.y + root.height * .36
+        allow_stretch: True
+        keep_ratio: True
+
+    Label:
+        text: root.titulo
+        color: 1, 1, 1, 1
+        bold: True
+        font_size: '13sp'
+        size_hint: 1, None
+        height: dp(24)
+        pos: root.x, root.y + root.height * .08
+
+
 <TelaPrincipal>:
     orientation: 'vertical'
     spacing: 0
 
     Cabecalho:
+        id: cabecalho
 
     BoxLayout:
-        # 1. Container invisível que cria a margem (empurra o cartão para o meio)
         orientation: 'vertical'
-        padding: [60, 20, 60, 20] 
+        padding: dp(40), dp(20)
+        spacing: dp(18)
 
-        # 2. O CARTÃO BRANCO FLUTUANTE
         GridLayout:
-            cols: 3
-            padding: [20, 20, 20, 20] # Margem interna para o texto não colar na borda do cartão
-            
+            id: menu_grid
+            cols: 4
+            padding: dp(18)
+            spacing: dp(18)
+            size_hint: 1, 1
+
             canvas.before:
                 Color:
-                    rgba: 1, 1, 1, 0.95
+                    rgba: 1, 1, 1, 0.96
                 RoundedRectangle:
                     pos: self.pos
                     size: self.size
-                    radius: [18]
+                    radius: [22]
 
-            Label:
-                text: "Extenções e Configurações"
-                font_size: 24
-                color: 0, 0, 0, 1
-                halign: 'center'
-                valign: 'middle'
-            
-            Label:
-                text: "Conteudo Teórico e Didatico"
-                font_size: 24
-                color: 0, 0, 0, 1
-                halign: 'center'
-                valign: 'middle'
-            
-            Label:
-                text: "Conteúdo Prático e Funcional"
-                font_size: 24
-                color: 0, 0, 0, 1
-                halign: 'center'
-                valign: 'middle'
+            CardMenu:
+                titulo: "Extensões e Configurações"
+                descricao: "Ative módulos, personalize o painel e acompanhe tudo em uma visão centralizada e prática."
+                imagem_source: "assets/img/config.jpg"
+                on_release: root.abrir_configuracoes()
+
+            CardMenu:
+                titulo: "Conteúdo Teórico e Didático"
+                descricao: "Acesse materiais de estudo, tutoriais e recursos educacionais para aprimorar suas habilidades."
+                imagem_source: "assets/img/book.png"
+
+            CardMenu:
+                titulo: "Conteúdo Prático e Aplicações"
+                descricao: "Explore exemplos práticos, projetos e aplicações para colocar em prática seus conhecimentos de forma eficiente."
+                imagem_source: "assets/img/pratic.png"
+
+        AreaNavegador:
+            id: browser_area
 
     Rodape:
         size_hint_y: None

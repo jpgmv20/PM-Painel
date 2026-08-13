@@ -1,0 +1,52 @@
+#:import dp kivy.metrics.dp
+
+<TelaConfiguracoes>:
+    orientation: 'vertical'
+    spacing: dp(20)
+    padding: dp(30), dp(20), dp(30), dp(20)
+
+    Cabecalho:
+        titulo: root.titulo
+
+    BoxLayout:
+        orientation: 'vertical'
+        spacing: dp(18)
+        size_hint_y: 1
+
+        canvas.before:
+            Color:
+                rgba: 0.08, 0.14, 0.28, 0.88
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [dp(18)]
+
+        Label:
+            text: 'Ajustes básicos'
+            bold: True
+            font_size: '22sp'
+            color: 1, 1, 1, 1
+            size_hint_y: None
+            height: dp(30)
+            halign: 'left'
+            text_size: self.size
+
+        Label:
+            text: '- Tema do painel: padrão\n- Sessão local: ativa\n- Notificações: habilitadas'
+            color: 0.9, 0.95, 1, 1
+            halign: 'left'
+            valign: 'top'
+            text_size: self.size
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(50)
+            padding: [0, dp(8), 0, 0]
+
+            Widget:
+                size_hint_x: 0.6
+
+            Button:
+                text: 'Voltar para o painel'
+                size_hint_x: 0.4
+                on_release: root.voltar_para_painel(self)

@@ -9,10 +9,6 @@
         on_release: root.select('perfil')
     
     BotaoFlutuante:
-        text: "Configurações"
-        on_release: root.select('configuracoes')
-    
-    BotaoFlutuante:
         text: 'Logout'
         color: 1, 0.3, 0.3, 1
         on_release: root.select('logout')
@@ -120,7 +116,7 @@
 <Rodape>:
     orientation: 'horizontal'
     size_hint_y: None
-    height: 35
+    height: 45
     padding: [30, 0, 30, 0]
 
     canvas.before:
@@ -158,8 +154,78 @@
         valign: 'middle'
 
 
+<CardMenu>:
+    orientation: 'vertical'
+    padding: dp(16)
+    spacing: dp(12)
+    size_hint: 1, 1
+
+    canvas.before:
+        PushMatrix
+        Translate:
+            y: root.elevacao
+        Color:
+            rgba: 0, 0, 0, root.opacidade_sombra
+        RoundedRectangle:
+            pos: self.x + root.deslocamento_sombra[0], self.y + root.deslocamento_sombra[1]
+            size: self.size
+            radius: [dp(22)]
+        Color:
+            rgba: root.cor_fundo
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(22)]
+
+    canvas.after:
+        PopMatrix
+
+    BoxLayout:
+        size_hint_y: 0.80
+        canvas.before:
+            StencilPush
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [dp(14)]
+            StencilUse
+        canvas.after:
+            StencilUnUse
+            StencilPop
+
+        Image:
+            source: root.imagem_source
+            fit_mode: 'fill'
+            size_hint: 1, 1
+
+    BoxLayout:
+        orientation: 'vertical'
+        spacing: dp(20)
+        size_hint_y: 0.20
+
+        Label:
+            text: root.titulo
+            font_size: '40sp'
+            bold: True
+            color: 1, 1, 1, 1
+            halign: 'left'
+            valign: 'middle'
+            text_size: self.width, None
+            size_hint_y: None
+            height: self.texture_size[1]
+
+        Label:
+            text: root.descricao
+            font_size: '20sp'
+            color: 0.9, 0.94, 1, 1
+            halign: 'left'
+            valign: 'top'
+            text_size: self.size
+            size_hint_y: 1
+
+
 <LayoutFundo>:
-        # Todo conteúdo que for jogado dentro desse layout será desenhado POR CIMA desse fundo
+    # Todo conteúdo que for jogado dentro desse layout será desenhado POR CIMA desse fundo
     canvas.before:
         # --- A) FUNDO GRADIENTE ---
         Color:

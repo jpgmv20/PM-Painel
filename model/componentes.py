@@ -1,15 +1,23 @@
 # view/componentes.py
+from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.properties import StringProperty, ObjectProperty, ListProperty
 from kivy.graphics.texture import Texture
 from kivy.properties import ObjectProperty
 from kivy.factory import Factory
 from kivy.properties import BooleanProperty
+from kivy.properties import NumericProperty
 from kivy.uix.button import Button
 from kivy.core.window import Window
+from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.dropdown import DropDown
 from kivy.core.image import Image as CoreImage
+from kivy.animation import Animation
+from kivy.uix.screenmanager import SlideTransition
+from kivy.uix.screenmanager import Screen, ScreenManager, SlideTransition
+from kivy.app import App
 
+from service.login.authentication import AuthenticationService as auth
 
 
 
@@ -69,7 +77,7 @@ class Cabecalho(BoxLayout):
         """Abre o menu suspenso ancorado ao botão de perfil."""
         self.menu_perfil.open(widget)
     
-    def atualizar_foto_perfil(self, novo_caminho_da_imagem):
+    def atualizar_foto_perfil(self, novo_caminho_da_imagem = "assets/icon/user_icon.png"):
         # Acessamos o botão através do ID definido no .kv e mudamos o source
         self.ids.btn_perfil.source = novo_caminho_da_imagem
 
@@ -77,21 +85,36 @@ class Cabecalho(BoxLayout):
     def on_kv_post(self, base_widget):
         # on_kv_post roda logo após o arquivo .kv ser carregado
         # Você pode chamar a função para definir a foto inicial aqui
-        self.atualizar_foto_perfil('assets/icon/user_icon.png')  # Caminho da imagem do usuário
+        self.atualizar_foto_perfil()  # Caminho da imagem do usuário
         
     def tratar_selecao_menu(self, instance, selection):
         """Trata a seleção do menu suspenso."""
         print(f"Opção selecionada: {selection}")
-        # Aqui você pode adicionar lógica para cada opção do menu
+
+        app = App.get_running_app()
+
         if selection == "Perfil":
-            #self.abrir_perfil()
             print("Abrindo perfil...")
-        elif selection == "Configurações":
-            #self.abrir_configuracoes()
-            print("Abrindo configurações...")
+            self.menu_perfil.dismiss()
+        elif selection == "logout":
+            if app is not None:
+                app.authentication_service.logout()
+                self.atualizar_foto_perfil()
+
+                manager = app.root
+                manager.transition = SlideTransition(direction="down", duration=0.35)
+                manager.current = "login"
+
+                login_screen = manager.get_screen("login").children[0]
+                login_screen.login_em_andamento = False
+                login_screen.status_texto = "Faça login com sua conta Google."
+                login_screen.status_cor = [0.45, 0.45, 0.45, 1]
+
+            self.menu_perfil.dismiss()
         elif selection == "Sair":
-            #self.sair_aplicativo()
-            print("Saindo do aplicativo...")
+            if app is not None:
+                app.stop()
+            self.menu_perfil.dismiss()
 
     def _criar_gradiente_azul(self):
         # Textura vertical de 1x2 pixels
@@ -134,15 +157,15 @@ class Rodape(BoxLayout):
 
     def _testar_servidor(self):
         """Testa a conexão com o servidor (temporariamente testando socket no IP 8.8.8.8 porta 53)."""
-        # Servidor de Teste Temporário (Substitua depois pelo IP/Porta do seu backend)
+        # Servidor de Teste Temporário
         HOST_SERVIDOR = "8.8.8.8"  
         PORTA_SERVIDOR = 53
 
         conectado = False
         try:
             # Tenta conectar com timeout rápido de 2.5 segundos
-            socket.setdefaulttimeout(2.5)
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(2.5)
                 s.connect((HOST_SERVIDOR, PORTA_SERVIDOR))
                 conectado = True
         except Exception:
@@ -159,8 +182,83 @@ class Rodape(BoxLayout):
         else:
             self.status_texto = f"{self.version} | Desconectado"
             self.status_cor = [0.95, 0.3, 0.3, 1]  # Vermelho Alerta
-    
-    
+
+
+
+class CardMenu(ButtonBehavior, BoxLayout):
+    """Cartão de menu com aparência e animação de hover reutilizáveis."""
+
+    titulo = StringProperty("Título do Card")
+    descricao = StringProperty("Descrição do card, explicando sua função.")
+    imagem_source = StringProperty("assets/img/config.jpg")
+    hovering = BooleanProperty(False)
+
+    # Estas propriedades são consumidas pela regra <CardMenu> em componentes.kv.
+    # Manter a aparência no KV deixa este widget responsável apenas pelo comportamento.
+    cor_fundo = ListProperty([0.06, 0.21, 0.48, 0.98])
+    cor_fundo_normal = ListProperty([0.06, 0.21, 0.48, 0.98])
+    cor_fundo_hover = ListProperty([0.08, 0.28, 0.60, 1])
+    deslocamento_sombra = ListProperty([6, -6])
+    deslocamento_sombra_normal = ListProperty([6, -6])
+    deslocamento_sombra_hover = ListProperty([14, -16])
+    opacidade_sombra = NumericProperty(0.22)
+    opacidade_sombra_normal = NumericProperty(0.22)
+    opacidade_sombra_hover = NumericProperty(0.38)
+    elevacao = NumericProperty(0)
+    elevacao_hover = NumericProperty(10)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._animacao = None
+        self._monitorando_mouse = False
+        self.bind(hovering=self._on_hovering)
+
+    def on_parent(self, _widget, parent):
+        """Monitora o mouse apenas enquanto o cartão estiver na interface."""
+        if parent is not None and not self._monitorando_mouse:
+            Window.bind(mouse_pos=self._on_mouse_pos)
+            self._monitorando_mouse = True
+        elif parent is None and self._monitorando_mouse:
+            Window.unbind(mouse_pos=self._on_mouse_pos)
+            self._monitorando_mouse = False
+            self.hovering = False
+
+    def _on_hovering(self, *args):
+        if self._animacao:
+            self._animacao.cancel(self)
+
+        cor_alvo = self.cor_fundo_hover if self.hovering else self.cor_fundo_normal
+        sombra_alvo = (
+            self.deslocamento_sombra_hover
+            if self.hovering
+            else self.deslocamento_sombra_normal
+        )
+        opacidade_alvo = (
+            self.opacidade_sombra_hover
+            if self.hovering
+            else self.opacidade_sombra_normal
+        )
+        self._animacao = Animation(
+            cor_fundo=cor_alvo,
+            deslocamento_sombra=sombra_alvo,
+            opacidade_sombra=opacidade_alvo,
+            elevacao=self.elevacao_hover if self.hovering else 0,
+            d=0.14,
+            t='out_quad',
+        )
+        self._animacao.start(self)
+
+    def _on_mouse_pos(self, _window, pos):
+        if not self.get_root_window():
+            return
+
+        local_pos = self.to_widget(*pos)
+        inside = self.collide_point(*local_pos)
+
+        if self.hovering != inside:
+            self.hovering = inside
+
+
 
 class BotaoHover(Button):
     hovering = BooleanProperty(False)

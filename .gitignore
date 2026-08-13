@@ -1,1 +1,11 @@
 logs/
+docs/client_google_desktop.json
+dados_usuario.json
+__pycache__/
+*.pyc
+dados_usuario.json
+__pycache__/
+*.pyc
+.pm-logs
+.pm_logs
+*.log
