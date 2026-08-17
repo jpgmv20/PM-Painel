@@ -1,5 +1,6 @@
 from kivy.app import App
 from functools import partial
+from pathlib import Path
 
 from kivy.factory import Factory
 from kivy.properties import BooleanProperty, StringProperty
@@ -7,6 +8,15 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import SlideTransition
 
 from model.componentes import BotaoHover, LayoutFundo
+
+
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+
+
+def _icone_do_servico(filename: str) -> str:
+    """Retorna um PNG personalizado quando ele estiver disponível na pasta de ícones."""
+    relative_path = f"assets/icon/{filename}"
+    return relative_path if (PROJECT_DIR / relative_path).is_file() else ""
 
 
 class AtalhoNavegador(BotaoHover):
@@ -38,18 +48,18 @@ class AreaNavegador(BoxLayout):
             return
         app = App.get_running_app()
         shortcuts = (
-            ("show_google", "Chrome", "assets/icon/google.png", "", self.abrir_navegador),
-            ("show_youtube", "YouTube", "assets/icon/youtube.png", "", partial(self.abrir_atalho, "https://www.youtube.com/")),
-            ("show_outlook", "Outlook", "assets/icon/outlook.png", "", partial(self.abrir_atalho, "https://outlook.office.com/")),
-            ("show_teams", "Teams", "assets/icon/teams.png", "", partial(self.abrir_atalho, "https://teams.microsoft.com/")),
-            ("show_word", "Word", "", "W", partial(self.abrir_atalho, "https://www.office.com/launch/word")),
-            ("show_excel", "Excel", "", "X", partial(self.abrir_atalho, "https://www.office.com/launch/excel")),
-            ("show_onedrive", "OneDrive", "", "☁", partial(self.abrir_atalho, "https://www.office.com/launch/onedrive")),
-            ("show_google_drive", "Google Drive", "", "D", partial(self.abrir_atalho, "https://drive.google.com/")),
-            ("show_classroom", "Classroom", "assets/icon/classroom.png", "", partial(self.abrir_atalho, "https://classroom.google.com/")),
-            ("show_github", "GitHub", "assets/icon/github.png", "", partial(self.abrir_atalho, "https://github.com/")),
-            ("show_discord", "Discord", "", "◉", partial(self.abrir_atalho, "https://discord.com/app")),
-            ("show_git", "Git Bash", "assets/icon/git.png", "", self.abrir_git_bash),
+            ("show_google", "Chrome", _icone_do_servico("google.png"), "", self.abrir_navegador),
+            ("show_youtube", "YouTube", _icone_do_servico("youtube.png"), "", partial(self.abrir_atalho, "https://www.youtube.com/")),
+            ("show_outlook", "Outlook", _icone_do_servico("outlook.png"), "", partial(self.abrir_atalho, "https://outlook.office.com/")),
+            ("show_teams", "Teams", _icone_do_servico("teams.png"), "", partial(self.abrir_atalho, "https://teams.microsoft.com/")),
+            ("show_word", "Word", _icone_do_servico("word.png"), "", partial(self.abrir_atalho, "https://www.office.com/launch/word")),
+            ("show_excel", "Excel", _icone_do_servico("excel.png"), "", partial(self.abrir_atalho, "https://www.office.com/launch/excel")),
+            ("show_onedrive", "OneDrive", _icone_do_servico("onedrive.png"), "", partial(self.abrir_atalho, "https://www.office.com/launch/onedrive")),
+            ("show_google_drive", "Google Drive", _icone_do_servico("google_drive.png"), "", partial(self.abrir_atalho, "https://drive.google.com/")),
+            ("show_classroom", "Classroom", _icone_do_servico("classroom.png"), "", partial(self.abrir_atalho, "https://classroom.google.com/")),
+            ("show_github", "GitHub", _icone_do_servico("github.png"), "", partial(self.abrir_atalho, "https://github.com/")),
+            ("show_discord", "Discord", _icone_do_servico("discord.png"), "", partial(self.abrir_atalho, "https://discord.com/app")),
+            ("show_git", "Git Bash", _icone_do_servico("git.png"), "", self.abrir_git_bash),
         )
         grid = self.ids.shortcuts_grid
         grid.clear_widgets()

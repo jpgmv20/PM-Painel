@@ -29,11 +29,21 @@
         size_hint_y: None
         height: dp(24)
 
-    GridLayout:
-        cols: 7
-        spacing: dp(10)
+    ScrollView:
+        do_scroll_x: True
+        do_scroll_y: False
+        bar_width: dp(7)
+        bar_color: .38, .72, 1, .85
+        bar_inactive_color: .38, .72, 1, .22
 
-        id: shortcuts_grid
+        GridLayout:
+            id: shortcuts_grid
+            rows: 1
+            size_hint: None, 1
+            col_force_default: True
+            col_default_width: max(dp(160), (root.width - dp(92)) / 7)
+            width: max(root.width - dp(32), self.minimum_width)
+            spacing: dp(10)
 
 
 <AtalhoNavegador>:
