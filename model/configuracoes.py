@@ -51,6 +51,7 @@ class ServicoOpcao(BoxLayout):
 
     titulo = StringProperty("")
     descricao = StringProperty("")
+    imagem = StringProperty("")
     simbolo = StringProperty("")
     key = StringProperty("")
     active = BooleanProperty(False)

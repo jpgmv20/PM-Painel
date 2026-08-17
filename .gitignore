@@ -6,6 +6,10 @@ __pycache__/
 dados_usuario.json
 __pycache__/
 *.pyc
-.pm-logs
-.pm_logs
+.pm-logs/
+.pm_logs/
 *.log
+build/
+dist/
+*.egg-info/
+installer/

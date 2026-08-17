@@ -71,16 +71,12 @@
     canvas.after:
         StencilUnUse
         StencilPop
-    Label:
-        text: root.simbolo
-        color: .08, .32, .68, 1
-        bold: True
-        font_size: '22sp'
+    Image:
+        source: root.imagem
         size_hint_x: None
-        width: dp(34)
-        halign: 'center'
-        valign: 'middle'
-        text_size: self.size
+        width: dp(30)
+        allow_stretch: True
+        keep_ratio: True
     BoxLayout:
         orientation: 'vertical'
         Label:
@@ -154,7 +150,7 @@
                     height: self.minimum_height
                     spacing: dp(8)
                     Label:
-                        text: '⚙  Geral'
+                        text: 'Geral'
                         color: .05, .20, .48, 1
                         bold: True
                         font_size: '20sp'
@@ -192,7 +188,7 @@
                     height: self.minimum_height
                     spacing: dp(8)
                     Label:
-                        text: '🔗  Aplicativos e serviços'
+                        text: 'Aplicativos e serviços'
                         color: .05, .20, .48, 1
                         bold: True
                         font_size: '20sp'
@@ -216,73 +212,73 @@
                         ServicoOpcao:
                             titulo: 'Google'
                             descricao: 'Navegador temporário'
-                            simbolo: 'G'
+                            imagem: 'assets/icon/google.png'
                             key: 'show_google'
                             active: app.settings.show_google
                         ServicoOpcao:
                             titulo: 'YouTube'
                             descricao: 'Vídeos e conteúdos'
-                            simbolo: '▶'
+                            imagem: 'assets/icon/youtube.png'
                             key: 'show_youtube'
                             active: app.settings.show_youtube
                         ServicoOpcao:
                             titulo: 'Outlook'
                             descricao: 'E-mail institucional web'
-                            simbolo: 'O'
+                            imagem: 'assets/icon/outlook.png'
                             key: 'show_outlook'
                             active: app.settings.show_outlook
                         ServicoOpcao:
                             titulo: 'Teams web'
                             descricao: 'Comunicação Microsoft'
-                            simbolo: 'T'
+                            imagem: 'assets/icon/teams.png'
                             key: 'show_teams'
                             active: app.settings.show_teams
                         ServicoOpcao:
                             titulo: 'Word web'
                             descricao: 'Documentos Microsoft'
-                            simbolo: 'W'
+                            imagem: 'assets/icon/word.png'
                             key: 'show_word'
                             active: app.settings.show_word
                         ServicoOpcao:
                             titulo: 'Excel web'
                             descricao: 'Planilhas Microsoft'
-                            simbolo: 'X'
+                            imagem: 'assets/icon/excel.png'
                             key: 'show_excel'
                             active: app.settings.show_excel
                         ServicoOpcao:
                             titulo: 'OneDrive web'
                             descricao: 'Arquivos Microsoft'
-                            simbolo: '☁'
+                            imagem: 'assets/icon/onedrive.png'
                             key: 'show_onedrive'
                             active: app.settings.show_onedrive
                         ServicoOpcao:
                             titulo: 'Google Drive web'
                             descricao: 'Arquivos Google'
-                            simbolo: 'D'
+                            imagem: 'assets/icon/google_drive.png'
                             key: 'show_google_drive'
                             active: app.settings.show_google_drive
                         ServicoOpcao:
                             titulo: 'Classroom'
                             descricao: 'Sala de aula Google'
-                            simbolo: 'C'
+                            imagem: 'assets/icon/classroom.png'
                             key: 'show_classroom'
                             active: app.settings.show_classroom
                         ServicoOpcao:
                             titulo: 'Discord web'
                             descricao: 'Comunicação online'
-                            simbolo: '◉'
+                            imagem: 'assets/icon/discord.png'
                             key: 'show_discord'
                             active: app.settings.show_discord
                         ServicoOpcao:
                             titulo: 'GitHub'
                             descricao: 'Projetos e repositórios'
-                            simbolo: '◈'
+                            imagem: 'assets/icon/github.png'
                             key: 'show_github'
                             active: app.settings.show_github
                         ServicoOpcao:
                             titulo: 'Git Bash'
                             descricao: 'Terminal isolado'
-                            simbolo: '⌘'
+                            imagem: 'assets/icon/git.png'
                             key: 'show_git'
                             active: app.settings.show_git
                 BoxLayout:
@@ -291,7 +287,7 @@
                     height: self.minimum_height
                     spacing: dp(8)
                     Label:
-                        text: '🖥  Configurações do computador'
+                        text: 'Configurações do computador'
                         color: .05, .20, .48, 1
                         bold: True
                         font_size: '20sp'
@@ -333,7 +329,7 @@
                     height: self.minimum_height
                     spacing: dp(8)
                     Label:
-                        text: '🔄  Atualizações'
+                        text: 'Atualizações'
                         color: .05, .20, .48, 1
                         bold: True
                         font_size: '20sp'
@@ -411,7 +407,7 @@
                             size: self.size
                             radius: [dp(20)]
                     Label:
-                        text: '🧹  Modo laboratório'
+                        text: 'Modo laboratório'
                         color: 1, 1, 1, 1
                         bold: True
                         font_size: '20sp'
