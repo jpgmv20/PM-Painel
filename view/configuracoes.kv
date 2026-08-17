@@ -1,52 +1,478 @@
 #:import dp kivy.metrics.dp
 
-<TelaConfiguracoes>:
-    orientation: 'vertical'
-    spacing: dp(20)
-    padding: dp(30), dp(20), dp(30), dp(20)
-
-    Cabecalho:
-        titulo: root.titulo
-
+<ConfiguracaoOpcao>:
+    size_hint_y: None
+    height: dp(74) if not root.aviso else dp(90)
+    padding: dp(16), dp(10)
+    spacing: dp(12)
+    canvas.before:
+        StencilPush
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+        StencilUse
+        Color:
+            rgba: .95, .97, 1, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+    canvas.after:
+        StencilUnUse
+        StencilPop
     BoxLayout:
         orientation: 'vertical'
-        spacing: dp(18)
-        size_hint_y: 1
-
-        canvas.before:
-            Color:
-                rgba: 0.08, 0.14, 0.28, 0.88
-            RoundedRectangle:
-                pos: self.pos
-                size: self.size
-                radius: [dp(18)]
-
         Label:
-            text: 'Ajustes básicos'
+            text: root.titulo
+            color: .06, .10, .18, 1
             bold: True
-            font_size: '22sp'
-            color: 1, 1, 1, 1
-            size_hint_y: None
-            height: dp(30)
+            font_size: '15sp'
             halign: 'left'
-            text_size: self.size
-
+            text_size: self.width, None
         Label:
-            text: '- Tema do painel: padrão\n- Sessão local: ativa\n- Notificações: habilitadas'
-            color: 0.9, 0.95, 1, 1
+            text: root.descricao
+            color: .37, .43, .53, 1
+            font_size: '12sp'
             halign: 'left'
-            valign: 'top'
-            text_size: self.size
+            text_size: self.width, None
+        Label:
+            text: root.aviso
+            color: .76, .42, .06, 1
+            font_size: '11sp'
+            halign: 'left'
+            text_size: self.width, None
+            size_hint_y: None
+            height: self.texture_size[1] if self.text else 0
+    Switch:
+        size_hint: None, None
+        size: dp(54), dp(32)
+        active: root.active
+        on_active: root.active = self.active
 
+<ServicoOpcao>:
+    size_hint_y: None
+    height: dp(82)
+    padding: dp(14), dp(10)
+    spacing: dp(10)
+    canvas.before:
+        StencilPush
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+        StencilUse
+        Color:
+            rgba: .95, .97, 1, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+    canvas.after:
+        StencilUnUse
+        StencilPop
+    Label:
+        text: root.simbolo
+        color: .08, .32, .68, 1
+        bold: True
+        font_size: '22sp'
+        size_hint_x: None
+        width: dp(34)
+        halign: 'center'
+        valign: 'middle'
+        text_size: self.size
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: root.titulo
+            color: .06, .10, .18, 1
+            bold: True
+            font_size: '14sp'
+            halign: 'left'
+            text_size: self.width, None
+        Label:
+            text: root.descricao
+            color: .37, .43, .53, 1
+            font_size: '11sp'
+            halign: 'left'
+            text_size: self.width, None
+    Switch:
+        size_hint: None, None
+        size: dp(48), dp(30)
+        active: root.active
+        on_active: root.active = self.active
+
+<TelaConfiguracoes>:
+    orientation: 'vertical'
+    Cabecalho:
+        titulo: 'Configurações'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: dp(36), dp(16)
+        spacing: dp(12)
         BoxLayout:
             size_hint_y: None
-            height: dp(50)
-            padding: [0, dp(8), 0, 0]
-
-            Widget:
-                size_hint_x: 0.6
-
+            height: dp(54)
             Button:
-                text: 'Voltar para o painel'
-                size_hint_x: 0.4
+                text: '‹'
+                size_hint: None, None
+                size: dp(42), dp(42)
+                font_size: '34sp'
+                color: .05, .20, .48, 1
+                background_normal: ''
+                background_down: ''
+                background_color: .90, .94, 1, 1
                 on_release: root.voltar_para_painel(self)
+            BoxLayout:
+                orientation: 'vertical'
+                padding: dp(12), 0
+                Label:
+                    text: 'Personalize o comportamento do PM-Painel'
+                    color: .06, .10, .18, 1
+                    bold: True
+                    font_size: '22sp'
+                    halign: 'left'
+                    text_size: self.width, None
+                Label:
+                    text: 'As alterações são salvas automaticamente neste computador.'
+                    color: .36, .41, .50, 1
+                    font_size: '12sp'
+                    halign: 'left'
+                    text_size: self.width, None
+        ScrollView:
+            do_scroll_x: False
+            bar_width: dp(8)
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(18)
+                padding: dp(2), dp(2), dp(12), dp(26)
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(8)
+                    Label:
+                        text: '⚙  Geral'
+                        color: .05, .20, .48, 1
+                        bold: True
+                        font_size: '20sp'
+                        size_hint_y: None
+                        height: dp(28)
+                        halign: 'left'
+                        text_size: self.width, None
+                    ConfiguracaoOpcao:
+                        titulo: 'Iniciar PM-Painel com o Windows'
+                        descricao: 'Preparado para instalação gerenciada.'
+                        aviso: 'Requer integração de instalação e autorização administrativa.'
+                        key: 'start_with_windows'
+                        active: app.settings.start_with_windows
+                    ConfiguracaoOpcao:
+                        titulo: 'Iniciar automaticamente após login'
+                        descricao: 'Opção independente para um futuro fluxo pós-login.'
+                        aviso: 'O projeto ainda não possui login automático.'
+                        key: 'start_after_login'
+                        active: app.settings.start_after_login
+                    ConfiguracaoOpcao:
+                        titulo: 'Minimizar para a bandeja'
+                        descricao: 'Mantém o painel disponível sem encerrar.'
+                        aviso: 'Preparado: não há integração com a bandeja do Windows.'
+                        key: 'minimize_to_tray'
+                        active: app.settings.minimize_to_tray
+                    ConfiguracaoOpcao:
+                        titulo: 'Confirmar antes de fechar'
+                        descricao: 'Preferência pronta para o diálogo de encerramento.'
+                        aviso: 'O diálogo ainda será integrado ao ciclo de janela.'
+                        key: 'confirm_before_close'
+                        active: app.settings.confirm_before_close
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(8)
+                    Label:
+                        text: '🔗  Aplicativos e serviços'
+                        color: .05, .20, .48, 1
+                        bold: True
+                        font_size: '20sp'
+                        size_hint_y: None
+                        height: dp(28)
+                        halign: 'left'
+                        text_size: self.width, None
+                    Label:
+                        text: 'Escolha os serviços que aparecerão nos acessos rápidos da Home.'
+                        color: .37, .43, .53, 1
+                        font_size: '13sp'
+                        size_hint_y: None
+                        height: dp(20)
+                        halign: 'left'
+                        text_size: self.width, None
+                    GridLayout:
+                        cols: 2
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(10)
+                        ServicoOpcao:
+                            titulo: 'Google'
+                            descricao: 'Navegador temporário'
+                            simbolo: 'G'
+                            key: 'show_google'
+                            active: app.settings.show_google
+                        ServicoOpcao:
+                            titulo: 'YouTube'
+                            descricao: 'Vídeos e conteúdos'
+                            simbolo: '▶'
+                            key: 'show_youtube'
+                            active: app.settings.show_youtube
+                        ServicoOpcao:
+                            titulo: 'Outlook'
+                            descricao: 'E-mail institucional web'
+                            simbolo: 'O'
+                            key: 'show_outlook'
+                            active: app.settings.show_outlook
+                        ServicoOpcao:
+                            titulo: 'Teams web'
+                            descricao: 'Comunicação Microsoft'
+                            simbolo: 'T'
+                            key: 'show_teams'
+                            active: app.settings.show_teams
+                        ServicoOpcao:
+                            titulo: 'Word web'
+                            descricao: 'Documentos Microsoft'
+                            simbolo: 'W'
+                            key: 'show_word'
+                            active: app.settings.show_word
+                        ServicoOpcao:
+                            titulo: 'Excel web'
+                            descricao: 'Planilhas Microsoft'
+                            simbolo: 'X'
+                            key: 'show_excel'
+                            active: app.settings.show_excel
+                        ServicoOpcao:
+                            titulo: 'OneDrive web'
+                            descricao: 'Arquivos Microsoft'
+                            simbolo: '☁'
+                            key: 'show_onedrive'
+                            active: app.settings.show_onedrive
+                        ServicoOpcao:
+                            titulo: 'Google Drive web'
+                            descricao: 'Arquivos Google'
+                            simbolo: 'D'
+                            key: 'show_google_drive'
+                            active: app.settings.show_google_drive
+                        ServicoOpcao:
+                            titulo: 'Classroom'
+                            descricao: 'Sala de aula Google'
+                            simbolo: 'C'
+                            key: 'show_classroom'
+                            active: app.settings.show_classroom
+                        ServicoOpcao:
+                            titulo: 'Discord web'
+                            descricao: 'Comunicação online'
+                            simbolo: '◉'
+                            key: 'show_discord'
+                            active: app.settings.show_discord
+                        ServicoOpcao:
+                            titulo: 'GitHub'
+                            descricao: 'Projetos e repositórios'
+                            simbolo: '◈'
+                            key: 'show_github'
+                            active: app.settings.show_github
+                        ServicoOpcao:
+                            titulo: 'Git Bash'
+                            descricao: 'Terminal isolado'
+                            simbolo: '⌘'
+                            key: 'show_git'
+                            active: app.settings.show_git
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(8)
+                    Label:
+                        text: '🖥  Configurações do computador'
+                        color: .05, .20, .48, 1
+                        bold: True
+                        font_size: '20sp'
+                        size_hint_y: None
+                        height: dp(28)
+                        halign: 'left'
+                        text_size: self.width, None
+                    ConfiguracaoOpcao:
+                        titulo: 'Tela cheia'
+                        descricao: 'Aplicada imediatamente à janela do PM-Painel.'
+                        key: 'fullscreen'
+                        active: app.settings.fullscreen
+                    ConfiguracaoOpcao:
+                        titulo: 'Iniciar em modo laboratório'
+                        descricao: 'Registra a preferência para a futura política de início.'
+                        aviso: 'Preparado: o modo ainda não possui uma política global de início.'
+                        key: 'start_in_lab_mode'
+                        active: app.settings.start_in_lab_mode
+                    ConfiguracaoOpcao:
+                        titulo: 'Bloquear fechamento do aplicativo'
+                        descricao: 'Política preparada para gestão administrativa.'
+                        aviso: 'Não aplicado: não há autenticação administrativa nem saída segura.'
+                        key: 'block_app_close'
+                        active: app.settings.block_app_close
+                    ConfiguracaoOpcao:
+                        titulo: 'Bloquear acesso a determinadas funções'
+                        descricao: 'Ponto de extensão para permissões do laboratório.'
+                        aviso: 'Não aplicado: ainda não existem regras de permissão.'
+                        key: 'block_restricted_features'
+                        active: app.settings.block_restricted_features
+                    ConfiguracaoOpcao:
+                        titulo: 'Mostrar informações do computador'
+                        descricao: 'Preferência para futura área de diagnóstico.'
+                        key: 'show_computer_info'
+                        active: app.settings.show_computer_info
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(8)
+                    Label:
+                        text: '🔄  Atualizações'
+                        color: .05, .20, .48, 1
+                        bold: True
+                        font_size: '20sp'
+                        size_hint_y: None
+                        height: dp(28)
+                        halign: 'left'
+                        text_size: self.width, None
+                    ConfiguracaoOpcao:
+                        titulo: 'Verificar atualizações automaticamente'
+                        descricao: 'Preferência pronta para o serviço de atualização.'
+                        key: 'auto_check_updates'
+                        active: app.settings.auto_check_updates
+                    ConfiguracaoOpcao:
+                        titulo: 'Baixar atualizações automaticamente'
+                        descricao: 'Preferência pronta para integração futura.'
+                        key: 'auto_download_updates'
+                        active: app.settings.auto_download_updates
+                    ConfiguracaoOpcao:
+                        titulo: 'Instalar ao reiniciar'
+                        descricao: 'Preferência pronta para integração futura.'
+                        key: 'install_updates_on_restart'
+                        active: app.settings.install_updates_on_restart
+                    BoxLayout:
+                        size_hint_y: None
+                        height: dp(64)
+                        padding: dp(16), dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: .95, .97, 1, 1
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(14)]
+                        Label:
+                            text: 'Canal de atualização'
+                            color: .06, .10, .18, 1
+                            bold: True
+                            font_size: '15sp'
+                            halign: 'left'
+                            text_size: self.width, None
+                        Spinner:
+                            text: app.settings.update_channel
+                            values: ('Estável', 'Beta', 'Desenvolvimento')
+                            size_hint_x: None
+                            width: dp(160)
+                            on_text: root.set_choice('update_channel', self.text)
+                    Button:
+                        text: 'Verificar atualizações agora'
+                        size_hint_y: None
+                        height: dp(48)
+                        background_normal: ''
+                        background_down: ''
+                        background_color: .07, .25, .56, 1
+                        bold: True
+                        on_release: root.verificar_atualizacoes()
+                    Label:
+                        text: root.update_status
+                        color: .48, .34, .08, 1
+                        font_size: '12sp'
+                        size_hint_y: None
+                        height: self.texture_size[1] if self.text else 0
+                        halign: 'center'
+                        text_size: self.width, None
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(8)
+                    padding: dp(14)
+                    canvas.before:
+                        Color:
+                            rgba: .06, .21, .48, .98
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(20)]
+                    Label:
+                        text: '🧹  Modo laboratório'
+                        color: 1, 1, 1, 1
+                        bold: True
+                        font_size: '20sp'
+                        size_hint_y: None
+                        height: dp(28)
+                        halign: 'left'
+                        text_size: self.width, None
+                    Label:
+                        text: 'Configure o comportamento do PM-Painel para computadores compartilhados em laboratórios.'
+                        color: .86, .92, 1, 1
+                        font_size: '13sp'
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        halign: 'left'
+                        text_size: self.width, None
+                    ConfiguracaoOpcao:
+                        titulo: 'Modo laboratório'
+                        descricao: 'Ativa as preferências desta seção.'
+                        key: 'laboratory_mode'
+                        active: app.settings.laboratory_mode
+                    ConfiguracaoOpcao:
+                        titulo: 'Limpar sessões ao sair'
+                        descricao: 'Limpa a sessão Google do painel ao encerrar.'
+                        key: 'clear_sessions_on_exit'
+                        active: app.settings.clear_sessions_on_exit
+                    ConfiguracaoOpcao:
+                        titulo: 'Limpar navegador temporário'
+                        descricao: 'Remove o perfil efêmero do navegador ao sair.'
+                        key: 'clear_temporary_browser'
+                        active: app.settings.clear_temporary_browser
+                    ConfiguracaoOpcao:
+                        titulo: 'Limpar sessões abandonadas ao iniciar'
+                        descricao: 'Remove na próxima abertura perfis deixados por falha ou desligamento.'
+                        key: 'clear_abandoned_sessions'
+                        active: app.settings.clear_abandoned_sessions
+                    ConfiguracaoOpcao:
+                        titulo: 'Bloquear persistência de login'
+                        descricao: 'O navegador já usa perfil temporário isolado.'
+                        key: 'prevent_login_persistence'
+                        active: app.settings.prevent_login_persistence
+                    BoxLayout:
+                        size_hint_y: None
+                        height: dp(64)
+                        padding: dp(16), dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: .95, .97, 1, 1
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(14)]
+                        Label:
+                            text: 'Tempo máximo de sessão'
+                            color: .06, .10, .18, 1
+                            bold: True
+                            font_size: '15sp'
+                            halign: 'left'
+                            text_size: self.width, None
+                        Spinner:
+                            text: app.settings.maximum_session_time
+                            values: ('30 minutos', '1 hora', '2 horas', '4 horas', '8 horas', 'Ilimitado')
+                            size_hint_x: None
+                            width: dp(160)
+                            on_text: root.set_choice('maximum_session_time', self.text)

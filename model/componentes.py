@@ -78,15 +78,10 @@ class Cabecalho(BoxLayout):
         self.menu_perfil.open(widget)
     
     def atualizar_foto_perfil(self, novo_caminho_da_imagem = "assets/icon/user_icon.png"):
-        # Acessamos o botão através do ID definido no .kv e mudamos o source
-        self.ids.btn_perfil.source = novo_caminho_da_imagem
+        app = App.get_running_app()
+        if app is not None:
+            app.set_profile_photo(novo_caminho_da_imagem)
 
-    # Exemplo: simulando quando o usuário faz login
-    def on_kv_post(self, base_widget):
-        # on_kv_post roda logo após o arquivo .kv ser carregado
-        # Você pode chamar a função para definir a foto inicial aqui
-        self.atualizar_foto_perfil()  # Caminho da imagem do usuário
-        
     def tratar_selecao_menu(self, instance, selection):
         """Trata a seleção do menu suspenso."""
         print(f"Opção selecionada: {selection}")
@@ -99,7 +94,7 @@ class Cabecalho(BoxLayout):
         elif selection == "logout":
             if app is not None:
                 app.authentication_service.logout()
-                self.atualizar_foto_perfil()
+                app.set_profile_photo()
 
                 manager = app.root
                 manager.transition = SlideTransition(direction="down", duration=0.35)

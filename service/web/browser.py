@@ -17,7 +17,11 @@ class BrowserManager:
 
     _PROFILE_PREFIX = "pm-painel-browser-"
 
-    def __init__(self, base_temp_dir: Optional[str | Path] = None) -> None:
+    def __init__(
+        self,
+        base_temp_dir: Optional[str | Path] = None,
+        cleanup_abandoned_profiles: bool = True,
+    ) -> None:
         temporary_root = Path(base_temp_dir) if base_temp_dir else Path(tempfile.gettempdir())
         self._profiles_root = temporary_root / "pm-painel-browser-profiles"
         self._profile_dir: Optional[Path] = None
@@ -25,7 +29,8 @@ class BrowserManager:
         self._destroyed = False
         self._resource_releaser: Optional[Callable[[], None]] = None
 
-        self._remove_abandoned_profiles()
+        if cleanup_abandoned_profiles:
+            self._remove_abandoned_profiles()
         self._create_profile()
         atexit.register(self.destroy_profile)
 
@@ -99,13 +104,18 @@ class BrowserManager:
         """Registra uma limpeza complementar para recursos futuros do navegador."""
         self._resource_releaser = releaser
 
-    def shutdown(self) -> None:
+    def shutdown(self, remove_profile: bool = True) -> None:
         """Encerra o Chrome e remove todos os dados temporários desta execução."""
         try:
             if self._resource_releaser is not None:
                 self._resource_releaser()
         finally:
-            self.destroy_profile()
+            if remove_profile:
+                self.destroy_profile()
+            else:
+                self.close_browser()
+                # Evita que o callback atexit transforme a preferência em uma limpeza.
+                self._destroyed = True
 
     def destroy_profile(self) -> None:
         """Remove cookies, cache e preferências quando o programa principal termina."""

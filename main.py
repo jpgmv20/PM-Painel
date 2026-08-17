@@ -9,6 +9,8 @@ Config.set("graphics", "fullscreen", "auto")
 Config.set("graphics", "resizable", "0")
 
 from kivy.app import App
+from kivy.core.window import Window
+from kivy.properties import StringProperty
 from kivy.lang import Builder
 from kivy.uix.screenmanager import Screen, ScreenManager, SlideTransition
 from kivymd.app import MDApp
@@ -22,6 +24,7 @@ from service.login.authentication import AuthenticationService
 from service.web.browser import BrowserManager
 from service.login.google_auth import GoogleAuth
 from service.login.session import SessionManager
+from service.settings import SettingsStore
 
 
 PROJECT_DIR = os.path.dirname(__file__)
@@ -46,9 +49,14 @@ class TelaInicial(componentes.LayoutFundo):
 class MeuApp(MDApp):
     """Monta as telas e controla os recursos que existem só nesta execução."""
 
+    profile_photo = StringProperty("assets/icon/user_icon.png")
+
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
-        self.browser_manager = BrowserManager()
+        self.settings = SettingsStore()
+        self.browser_manager = BrowserManager(
+            cleanup_abandoned_profiles=self.settings.clear_abandoned_sessions,
+        )
         self.git_bash_manager = GitBashManager()
         self.session_manager = SessionManager()
         self.google_auth = GoogleAuth()
@@ -57,6 +65,13 @@ class MeuApp(MDApp):
             session_manager=self.session_manager,
             browser_manager=self.browser_manager,
         )
+        self.settings.bind(fullscreen=self._apply_fullscreen)
+        self._apply_fullscreen(self.settings, self.settings.fullscreen)
+
+    @staticmethod
+    def _apply_fullscreen(_settings: SettingsStore, enabled: bool) -> None:
+        """Aplica imediatamente a única preferência de computador suportada pelo app."""
+        Window.fullscreen = "auto" if enabled else False
 
     def build(self) -> ScreenManager:
         manager = ScreenManager(transition=SlideTransition(direction="right", duration=0.25))
@@ -71,11 +86,16 @@ class MeuApp(MDApp):
             manager.add_widget(screen)
         return manager
 
+    def set_profile_photo(self, path: str | None) -> None:
+        """Atualiza todos os cabeçalhos por meio de uma única propriedade reativa."""
+        self.profile_photo = path or "assets/icon/user_icon.png"
+
     def on_stop(self) -> None:
         """Remove sessão, credenciais e perfil do navegador ao fechar o painel."""
-        self.session_manager.clear()
-        self.google_auth.logout()
-        self.browser_manager.shutdown()
+        if self.settings.clear_sessions_on_exit:
+            self.session_manager.clear()
+            self.google_auth.logout()
+        self.browser_manager.shutdown(remove_profile=self.settings.clear_temporary_browser)
         self.git_bash_manager.shutdown()
 
 

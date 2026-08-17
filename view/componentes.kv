@@ -106,9 +106,7 @@
 
     FotoPerfil:
         id: btn_perfil
-        
-        # APONTE O CAMINHO AQUI:
-        source: ''
+        source: app.profile_photo
         
         pos_hint: {'center_y': 0.5}
         on_release: root.abrir_menu(self)
@@ -157,7 +155,7 @@
 <CardMenu>:
     orientation: 'vertical'
     padding: dp(16)
-    spacing: dp(12)
+    spacing: dp(10)
     size_hint: 1, 1
 
     canvas.before:
@@ -181,7 +179,7 @@
         PopMatrix
 
     BoxLayout:
-        size_hint_y: 0.80
+        size_hint_y: .62
         canvas.before:
             StencilPush
             RoundedRectangle:
@@ -195,28 +193,37 @@
 
         Image:
             source: root.imagem_source
-            fit_mode: 'fill'
+            fit_mode: 'cover'
             size_hint: 1, 1
 
     BoxLayout:
         orientation: 'vertical'
-        spacing: dp(20)
-        size_hint_y: 0.20
+        spacing: dp(6)
+        size_hint_y: .38
+        canvas.before:
+            StencilPush
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            StencilUse
+        canvas.after:
+            StencilUnUse
+            StencilPop
 
         Label:
             text: root.titulo
-            font_size: '40sp'
+            font_size: '26sp'
             bold: True
             color: 1, 1, 1, 1
             halign: 'left'
             valign: 'middle'
-            text_size: self.width, None
+            text_size: self.width, self.height
             size_hint_y: None
-            height: self.texture_size[1]
+            height: dp(72)
 
         Label:
             text: root.descricao
-            font_size: '20sp'
+            font_size: '16sp'
             color: 0.9, 0.94, 1, 1
             halign: 'left'
             valign: 'top'
