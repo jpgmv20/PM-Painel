@@ -1,0 +1,118 @@
+#:import dp kivy.metrics.dp
+
+<TelaMaterias>:
+    orientation: 'vertical'
+    spacing: 0
+
+    BoxLayout:
+        size_hint_y: None
+        height: dp(46)
+        padding: dp(14), 0
+        spacing: dp(12)
+        canvas.before:
+            Color:
+                rgba: .045, .045, .052, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        Label:
+            text: 'PM'
+            size_hint_x: None
+            width: dp(38)
+            bold: True
+            font_size: '17sp'
+            color: .45, .67, 1, 1
+
+        Label:
+            text: root.titulo
+            size_hint_x: .23
+            bold: True
+            color: .93, .96, 1, 1
+            halign: 'left'
+            valign: 'middle'
+            text_size: self.size
+
+        TextInput:
+            hint_text: 'Pesquisar nesta equipe'
+            multiline: False
+            size_hint_x: .42
+            foreground_color: .90, .94, 1, 1
+            hint_text_color: .55, .64, .78, 1
+            background_normal: ''
+            background_active: ''
+            background_color: .13, .13, .15, 1
+
+        Widget:
+
+        Label:
+            text: root.papel.upper()
+            size_hint_x: None
+            width: dp(95)
+            color: .62, .74, .96, 1
+            font_size: '11sp'
+
+    BoxLayout:
+        orientation: 'vertical'
+        padding: dp(18), dp(12)
+        spacing: dp(8)
+
+        canvas.before:
+            Color:
+                rgba: .045, .075, .13, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(44)
+            spacing: dp(10)
+
+            Button:
+                text: '← Painel'
+                size_hint_x: .14
+                background_normal: ''
+                background_color: .08, .22, .46, 1
+                on_release: root.voltar()
+
+            Label:
+                text: root.status_texto
+                color: .79, .87, 1, 1
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+
+            Button:
+                text: '+ Criar equipe'
+                size_hint_x: .18
+                disabled: not root.pode_editar
+                opacity: 1 if root.pode_editar else .5
+                background_normal: ''
+                background_color: .08, .43, .82, 1
+                on_release: root.editar_materia()
+
+        BoxLayout:
+            orientation: 'vertical'
+            padding: dp(14)
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: .065, .105, .17, 1
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [dp(14)]
+            ScrollView:
+                do_scroll_x: False
+                bar_width: dp(8)
+                bar_color: .10, .45, .88, .9
+                bar_inactive_color: .10, .45, .88, .22
+                GridLayout:
+                    id: conteudo
+                    cols: 1
+                    spacing: dp(10)
+                    size_hint_y: None
+                    height: self.minimum_height
+
+    Rodape:

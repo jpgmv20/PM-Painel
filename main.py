@@ -19,7 +19,10 @@ import model.componentes as componentes
 from model.configuracoes import TelaConfiguracoes
 from model.home import TelaPrincipal
 from model.login import TelaLogin
+from model.tela_materias import TelaEquipe, TelaMaterias
 from service.git_bash import GitBashManager
+from service.materias import MateriasService
+from service.permissoes import PermissionService
 from service.login.authentication import AuthenticationService
 from service.web.browser import BrowserManager
 from service.login.google_auth import GoogleAuth
@@ -30,7 +33,7 @@ from service.settings import SettingsStore
 PROJECT_DIR = os.path.dirname(__file__)
 
 # Carrega primeiro os widgets reutilizáveis e depois as telas que os utilizam.
-for view_name in ("componentes.kv", "main.kv", "login.kv", "home.kv", "configuracoes.kv"):
+for view_name in ("componentes.kv", "main.kv", "login.kv", "home.kv", "configuracoes.kv", "materias.kv"):
     Builder.load_file(os.path.join(PROJECT_DIR, "view", view_name))
 
 
@@ -54,6 +57,8 @@ class MeuApp(MDApp):
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
         self.settings = SettingsStore()
+        self.materias_service = MateriasService()
+        self.permission_service = PermissionService()
         self.browser_manager = BrowserManager(
             cleanup_abandoned_profiles=self.settings.clear_abandoned_sessions,
         )
@@ -80,6 +85,8 @@ class MeuApp(MDApp):
             ("login", TelaLogin()),
             ("principal", TelaPrincipal()),
             ("configuracoes", TelaConfiguracoes()),
+            ("materias", TelaMaterias()),
+            ("equipe", TelaEquipe()),
         ):
             screen = Screen(name=name)
             screen.add_widget(widget)

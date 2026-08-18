@@ -125,6 +125,14 @@ class TelaPrincipal(LayoutFundo):
         manager.transition = SlideTransition(direction="left", duration=0.25)
         manager.current = "configuracoes"
 
+    def abrir_materias(self) -> None:
+        """Abre o módulo local de conteúdos teóricos e didáticos."""
+        manager = App.get_running_app().root
+        manager.transition = SlideTransition(direction="left", duration=0.25)
+        tela = manager.get_screen("materias").children[0]
+        tela.atualizar()
+        manager.current = "materias"
+
     def on_kv_post(self, _base_widget) -> None:
         self.ids.browser_area.configurar_browser()
         settings = App.get_running_app().settings
