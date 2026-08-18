@@ -50,7 +50,15 @@ class LayoutFundo(BoxLayout):
 
 
 class MenuPerfil(DropDown):
-    pass
+    logout_bloqueado = BooleanProperty(False)
+
+    def atualizar_estado_logout(self) -> None:
+        app = App.get_running_app()
+        if app is None or getattr(app, "root", None) is None:
+            return
+
+        tela_atual = app.root.current
+        self.logout_bloqueado = tela_atual in {"home", "login"}
 
 
 
@@ -75,12 +83,32 @@ class Cabecalho(BoxLayout):
         
     def abrir_menu(self, widget):
         """Abre o menu suspenso ancorado ao botão de perfil."""
+        self.menu_perfil.atualizar_estado_logout()
         self.menu_perfil.open(widget)
     
     def atualizar_foto_perfil(self, novo_caminho_da_imagem = "assets/icon/user_icon.png"):
         app = App.get_running_app()
         if app is not None:
             app.set_profile_photo(novo_caminho_da_imagem)
+
+    def _voltar_para_login(self, app):
+        manager = getattr(app, "root", None)
+        if manager is None:
+            return
+
+        try:
+            login_screen = manager.get_screen("login")
+        except Exception:
+            return
+
+        if login_screen.children:
+            tela_login = login_screen.children[-1]
+            tela_login.login_em_andamento = False
+            tela_login.status_texto = "Faça login com sua conta Google."
+            tela_login.status_cor = [0.45, 0.45, 0.45, 1]
+
+        manager.transition = SlideTransition(direction="down", duration=0.35)
+        manager.current = "login"
 
     def tratar_selecao_menu(self, instance, selection):
         """Trata a seleção do menu suspenso."""
@@ -93,17 +121,12 @@ class Cabecalho(BoxLayout):
             self.menu_perfil.dismiss()
         elif selection == "logout":
             if app is not None:
+                if getattr(app.root, "current", None) in {"home", "login"}:
+                    self.menu_perfil.dismiss()
+                    return
                 app.authentication_service.logout()
                 app.set_profile_photo()
-
-                manager = app.root
-                manager.transition = SlideTransition(direction="down", duration=0.35)
-                manager.current = "login"
-
-                login_screen = manager.get_screen("login").children[0]
-                login_screen.login_em_andamento = False
-                login_screen.status_texto = "Faça login com sua conta Google."
-                login_screen.status_cor = [0.45, 0.45, 0.45, 1]
+                self._voltar_para_login(app)
 
             self.menu_perfil.dismiss()
         elif selection == "Sair":

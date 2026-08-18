@@ -91,6 +91,7 @@ class TelaLogin(componentes.LayoutFundo):
                     resposta = requests.get(foto_url, timeout=20)
                     resposta.raise_for_status()
                     arquivo.write_bytes(resposta.content)
+                    app.google_auth.remember_profile_photo(arquivo)
                     caminho = str(arquivo)
                 except Exception:
                     caminho = 'assets/icon/user_icon.png'
@@ -108,5 +109,7 @@ class TelaLogin(componentes.LayoutFundo):
         threading.Thread(target=_baixar_e_aplicar, daemon=True).start()
     
     def _logout(self):
-        auth.logout()
+        app = App.get_running_app()
+        if app is not None:
+            app.authentication_service.logout()
     

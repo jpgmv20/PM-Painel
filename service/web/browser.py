@@ -131,6 +131,12 @@ class BrowserManager:
         except OSError:
             pass
 
+    def reset_profile(self) -> None:
+        """Apaga o perfil atual e cria outro vazio para uma nova sessão."""
+        self.destroy_profile()
+        self._destroyed = False
+        self._create_profile()
+
     def get_profile_path(self) -> Path:
         """Mantém compatibilidade com componentes visuais que exibem o caminho."""
         return self.profile_path

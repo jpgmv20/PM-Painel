@@ -15,7 +15,11 @@ class OAuthCallbackServer:
         self._completed = Event()
         self._authorization_response: Optional[str] = None
         self._error: Optional[str] = None
-        self._server = ThreadingHTTPServer(("127.0.0.1", 0), self._create_handler())
+        class SilentThreadingHTTPServer(ThreadingHTTPServer):
+            def handle_error(self, _request, _client_address) -> None:
+                return
+
+        self._server = SilentThreadingHTTPServer(("127.0.0.1", 0), self._create_handler())
         self._thread = Thread(target=self._server.serve_forever, daemon=True)
 
     @property

@@ -86,7 +86,7 @@ class MeuApp(MDApp):
             manager.add_widget(screen)
         return manager
 
-    def set_profile_photo(self, path: str | None) -> None:
+    def set_profile_photo(self, path: str | None = None) -> None:
         """Atualiza todos os cabeçalhos por meio de uma única propriedade reativa."""
         self.profile_photo = path or "assets/icon/user_icon.png"
 

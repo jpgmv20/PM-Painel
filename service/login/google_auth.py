@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Any, Optional, Sequence, TYPE_CHECKING
 
@@ -31,6 +33,7 @@ class GoogleAuth:
         self._scopes = tuple(scopes or SCOPES)
         self._credentials: Optional[Credentials] = None
         self._user_profile: Optional[dict[str, Any]] = None
+        self._profile_photo_path: Optional[Path] = None
 
     def start_login(self, browser: "BrowserManager") -> Credentials:
         """Abre a autorização no WebView do programa e troca o código por token."""
@@ -71,6 +74,33 @@ class GoogleAuth:
         return profile
 
     def logout(self) -> None:
-        """Descarta referências sensíveis; o navegador temporário é apagado pelo app."""
+        """Revoga o token quando possível e descarta referências sensíveis."""
+        credentials = self._credentials
+        if credentials is not None:
+            try:
+                token = credentials.refresh_token or credentials.token
+                if token:
+                    requests.post("https://oauth2.googleapis.com/revoke", params={"token": token}, timeout=10)
+            except Exception:
+                pass
+        self._remove_cached_profile_photo()
         self._credentials = None
         self._user_profile = None
+
+    def remember_profile_photo(self, path: str | Path) -> None:
+        """Guarda o arquivo baixado do Google para removê-lo no logout."""
+        self._profile_photo_path = Path(path)
+
+    def _remove_cached_profile_photo(self) -> None:
+        path = self._profile_photo_path
+        if path is None:
+            path = Path(tempfile.gettempdir()) / "pm_painel" / "perfil_google.jpg"
+        try:
+            if path.is_file():
+                path.unlink()
+            elif path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+        except Exception:
+            pass
+        finally:
+            self._profile_photo_path = None

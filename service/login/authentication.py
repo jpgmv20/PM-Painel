@@ -47,3 +47,4 @@ class AuthenticationService:
         """Revoga a credencial quando possível e remove a sessão local."""
         self._session_manager.clear()
         self._google_auth.logout()
+        self._browser_manager.reset_profile()
