@@ -1,6 +1,6 @@
 # PM-Painel
 
-Aplicação desktop em Kivy/KivyMD para organizar login, atalhos de serviços, configurações persistentes e integrações auxiliares como navegador temporário e Git Bash isolado.
+Aplicação em Kivy/KivyMD para apoiar o estudo das disciplinas do curso de Informática, mantendo os atalhos de serviços, configurações persistentes e integrações auxiliares que já existiam no painel.
 
 ## Visão geral
 
@@ -12,6 +12,21 @@ O projeto está organizado em camadas:
 - `view/` contém as regras `KV` da interface.
 - `devtools/` reúne a infraestrutura do ambiente de desenvolvimento.
 - `assets/` guarda imagens, ícones e fontes.
+
+## Funcionalidades acadêmicas e contas
+
+- O acesso pode ser feito por conta local de aluno ou pela autenticação Google já existente. O cadastro livre cria apenas contas de aluno.
+- Professores e moderadores são cadastrados pelo moderador. O moderador associa professores às matérias e pode suspender ou reativar contas.
+- Um professor edita conteúdo apenas nas matérias associadas à sua conta. O moderador administra matérias e conteúdos de todo o painel.
+- Matérias, tópicos, publicações, arquivos, trabalhos, extensões e preferências ficam armazenados localmente. O último perfil autenticado pode ser restaurado offline por até sete dias; sair da conta apaga esse passe.
+- O modo offline bloqueia login/cadastro, gestão de usuários, alteração de matérias e instalação das extensões marcadas como dependentes de rede. O conteúdo já salvo localmente continua disponível.
+- Extensões Python podem ser enviadas para revisão. Professores e moderadores aprovam; depois da instalação, o usuário confirma antes de executar o arquivo.
+
+### Limites atuais de sincronização e distribuição
+
+O repositório não contém serviço ou endpoint de servidor. Por isso, contas, matérias e extensões criadas no painel ficam neste computador e não são compartilhadas automaticamente entre dispositivos; as ações que exigem internet são sinalizadas e bloqueadas sem conexão, mas uma camada de sincronização ainda depende de um backend. A integração de compiladores citada no relatório permanece uma possibilidade futura.
+
+O projeto e os dados foram preparados para usar o diretório de dados fornecido pelo Kivy em sistemas que não sejam Windows. A distribuição existente está configurada para Windows; não há neste repositório um fluxo validado para gerar APK ou pacote iOS, e as integrações de Chrome e Git Bash são específicas do desktop.
 
 ## Como executar
 
@@ -103,7 +118,10 @@ Camada de telas e widgets de comportamento.
 - `model/componentes.py`: widgets reutilizáveis da interface, como cabeçalho, rodapé, layout base, menu de perfil e cartão de menu.
 - `model/configuracoes.py`: tela de configurações e widgets de opções reutilizáveis.
 - `model/home.py`: tela principal, atalhos de serviços e área do navegador temporário.
-- `model/login.py`: tela de login e fluxo visual da autenticação Google.
+- `model/login.py`: tela de login Google, login local e cadastro de aluno.
+- `model/perfil.py`: visualização e edição do perfil.
+- `model/usuarios.py`: gestão local de contas e atribuição de matérias.
+- `model/extensoes.py`: envio, aprovação, instalação e execução de extensões locais.
 
 ### `service/`
 
@@ -112,6 +130,10 @@ Camada de serviços e integrações.
 - `service/__init__.py`: marca o pacote.
 - `service/READ.md`: nota geral da camada de serviços.
 - `service/settings.py`: armazenamento persistente das preferências em JSON fora da pasta do projeto.
+- `service/login/users.py`: contas locais com hash de senha e papéis de acesso.
+- `service/login/session.py`: sessão em memória e passe de acesso offline com validade limitada.
+- `service/network.py`: verificação de conectividade para ações que dependem da internet.
+- `service/extensions.py`: catálogo local de extensões.
 - `service/git_bash.py`: abre o Git Bash em um perfil temporário e descarta dados ao encerrar.
 
 #### `service/login/`

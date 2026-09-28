@@ -10,7 +10,7 @@ from model.materias import ArquivoCompartilhado, Comentario, Conteudo, Materia, 
 
 
 class MateriasService:
-    VERSAO = 2
+    VERSAO = 3
 
     def __init__(self, path: str | Path | None = None) -> None:
         base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))

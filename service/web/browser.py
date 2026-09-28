@@ -21,17 +21,37 @@ class BrowserManager:
         self,
         base_temp_dir: Optional[str | Path] = None,
         cleanup_abandoned_profiles: bool = True,
+        prevent_login_persistence: bool = True,
+        persistent_profile_dir: Optional[str | Path] = None,
     ) -> None:
         temporary_root = Path(base_temp_dir) if base_temp_dir else Path(tempfile.gettempdir())
         self._profiles_root = temporary_root / "pm-painel-browser-profiles"
         self._profile_dir: Optional[Path] = None
+        self._persistent_profile_dir = Path(persistent_profile_dir) if persistent_profile_dir else None
+        self._active_marker: Optional[Path] = None
         self._browser_processes: list[subprocess.Popen[bytes]] = []
         self._destroyed = False
         self._resource_releaser: Optional[Callable[[], None]] = None
+        self.prevent_login_persistence = bool(prevent_login_persistence)
 
         if cleanup_abandoned_profiles:
             self._remove_abandoned_profiles()
+        if self._persistent_profile_dir is not None:
+            marker = self._persistent_profile_dir / ".pm-painel-active"
+            if marker.exists():
+                try:
+                    active_pid = int(marker.read_text(encoding="utf-8").strip())
+                except (OSError, ValueError):
+                    active_pid = 0
+                if active_pid and self._process_is_running(active_pid):
+                    # Uma segunda instância recebe um perfil próprio e não toca no perfil ativo.
+                    self._persistent_profile_dir = None
+                elif cleanup_abandoned_profiles:
+                    shutil.rmtree(marker.parent, ignore_errors=True)
         self._create_profile()
+        if self._persistent_profile_dir is not None:
+            self._active_marker = self._persistent_profile_dir / ".pm-painel-active"
+            self._active_marker.write_text(str(os.getpid()), encoding="utf-8")
         atexit.register(self.destroy_profile)
 
     @property
@@ -74,6 +94,8 @@ class BrowserManager:
             command.append(f"--app={url}")
         else:
             command.extend(("--new-window", url))
+        if self.prevent_login_persistence:
+            command.append("--incognito")
 
         browser_process = subprocess.Popen(command, cwd=str(self.profile_path))
         time.sleep(0.2)
@@ -114,6 +136,8 @@ class BrowserManager:
                 self.destroy_profile()
             else:
                 self.close_browser()
+                if self._active_marker is not None:
+                    self._active_marker.unlink(missing_ok=True)
                 # Evita que o callback atexit transforme a preferência em uma limpeza.
                 self._destroyed = True
 
@@ -126,6 +150,7 @@ class BrowserManager:
         profile_dir, self._profile_dir = self._profile_dir, None
         if profile_dir is not None:
             shutil.rmtree(profile_dir, ignore_errors=True)
+        self._active_marker = None
         try:
             self._profiles_root.rmdir()
         except OSError:
@@ -136,6 +161,9 @@ class BrowserManager:
         self.destroy_profile()
         self._destroyed = False
         self._create_profile()
+        if self._persistent_profile_dir is not None:
+            self._active_marker = self._persistent_profile_dir / ".pm-painel-active"
+            self._active_marker.write_text(str(os.getpid()), encoding="utf-8")
 
     def get_profile_path(self) -> Path:
         """Mantém compatibilidade com componentes visuais que exibem o caminho."""
@@ -156,6 +184,10 @@ class BrowserManager:
         raise RuntimeError("Instale Google Chrome ou Microsoft Edge para usar o navegador do painel.")
 
     def _create_profile(self) -> None:
+        if self._persistent_profile_dir is not None:
+            self._persistent_profile_dir.mkdir(parents=True, exist_ok=True)
+            self._profile_dir = self._persistent_profile_dir
+            return
         self._profiles_root.mkdir(parents=True, exist_ok=True)
         self._profile_dir = Path(tempfile.mkdtemp(prefix=f"{self._PROFILE_PREFIX}{os.getpid()}-", dir=self._profiles_root))
 
@@ -165,4 +197,20 @@ class BrowserManager:
             return
         for candidate in self._profiles_root.iterdir():
             if candidate.is_dir() and candidate.name.startswith(self._PROFILE_PREFIX):
-                shutil.rmtree(candidate, ignore_errors=True)
+                owner_text = candidate.name[len(self._PROFILE_PREFIX):].split("-", 1)[0]
+                try:
+                    owner_pid = int(owner_text)
+                except ValueError:
+                    owner_pid = 0
+                if not owner_pid or not self._process_is_running(owner_pid):
+                    shutil.rmtree(candidate, ignore_errors=True)
+
+    @staticmethod
+    def _process_is_running(pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+            return True
+        except PermissionError:
+            return True
+        except OSError:
+            return False

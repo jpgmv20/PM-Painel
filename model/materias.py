@@ -56,6 +56,7 @@ class Publicacao:
     tipo: str = "aviso"  # aviso | conteudo | tarefa | recado
     status: str = "publicado"
     anexos: list[str] = field(default_factory=list)
+    arquivos_ids: list[str] = field(default_factory=list)
     comentarios: list[Comentario] = field(default_factory=list)
     criado_em: str = field(default_factory=agora)
     atualizado_em: str = field(default_factory=agora)
@@ -64,6 +65,8 @@ class Publicacao:
     def from_dict(cls, value: dict[str, Any]) -> "Publicacao":
         data = {key: value[key] for key in cls.__dataclass_fields__ if key in value and key != "comentarios"}
         data["comentarios"] = [Comentario.from_dict(item) for item in value.get("comentarios", []) if isinstance(item, dict)]
+        raw_file_ids = data.get("arquivos_ids", [])
+        data["arquivos_ids"] = [str(item) for item in raw_file_ids] if isinstance(raw_file_ids, list) else []
         return cls(**data)
 
 
@@ -130,6 +133,7 @@ class Materia:
     nome: str = ""
     descricao: str = ""
     categoria: str = "Geral"
+    criado_por_email: str = ""
     status: str = "ativa"
     topicos: list[Topico] = field(default_factory=list)
     publicacoes: list[Publicacao] = field(default_factory=list)

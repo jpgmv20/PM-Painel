@@ -1,13 +1,16 @@
 # view/componentes.py
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
-from kivy.properties import StringProperty, ObjectProperty, ListProperty
+from kivy.properties import StringProperty, ObjectProperty, ListProperty, OptionProperty
 from kivy.graphics.texture import Texture
 from kivy.properties import ObjectProperty
 from kivy.factory import Factory
 from kivy.properties import BooleanProperty
 from kivy.properties import NumericProperty
 from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
+from kivy.graphics import Color, Line, RoundedRectangle
+from kivy.metrics import dp
 from kivy.core.window import Window
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.dropdown import DropDown
@@ -16,6 +19,9 @@ from kivy.animation import Animation
 from kivy.uix.screenmanager import SlideTransition
 from kivy.uix.screenmanager import Screen, ScreenManager, SlideTransition
 from kivy.app import App
+import os
+from kivymd.icon_definitions import md_icons
+from kivymd.uix.label import MDIcon
 
 from service.login.authentication import AuthenticationService as auth
 
@@ -27,25 +33,30 @@ import threading
 from kivy.clock import Clock
 
 
+
 class LayoutFundo(BoxLayout):
     """Layout base reutilizável que já vem com o fundo gradiente e grafismos."""
     fundo_textura = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.fundo_textura = self.criar_gradiente_fundo()
+        app = App.get_running_app()
+        theme = app.settings.theme if app is not None and hasattr(app, "settings") else "Claro"
+        self.fundo_textura = self.criar_gradiente_fundo(theme)
+        if app is not None and hasattr(app, "settings"):
+            app.settings.bind(theme=self._atualizar_tema)
 
-    def criar_gradiente_fundo(self):
+    def criar_gradiente_fundo(self, theme="Claro"):
         texture = Texture.create(size=(1, 2), colorfmt='rgba')
-        
-        # Seus pixels personalizados
-        pixels = bytes([
-            13,  74,  161, 255,
-            100, 180, 240, 255
-        ])
-        
+        if str(theme).casefold() in {"escuro", "dark"}:
+            pixels = bytes([7, 20, 43, 255, 28, 57, 96, 255])
+        else:
+            pixels = bytes([13, 74, 161, 255, 100, 180, 240, 255])
         texture.blit_buffer(pixels, colorfmt='rgba', bufferfmt='ubyte')
         return texture
+
+    def _atualizar_tema(self, _settings, theme):
+        self.fundo_textura = self.criar_gradiente_fundo(theme)
     
 
 
@@ -74,6 +85,9 @@ class Cabecalho(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.gradiente_textura = self._criar_gradiente_azul()
+        app = App.get_running_app()
+        if app is not None and hasattr(app, "settings"):
+            app.settings.bind(theme=self._atualizar_tema)
         
         # Instancia o menu suspenso
         self.menu_perfil = MenuPerfil()
@@ -104,7 +118,7 @@ class Cabecalho(BoxLayout):
         if login_screen.children:
             tela_login = login_screen.children[-1]
             tela_login.login_em_andamento = False
-            tela_login.status_texto = "Faça login com sua conta Google."
+            tela_login.status_texto = "Entre com e-mail e senha ou use sua conta Google."
             tela_login.status_cor = [0.45, 0.45, 0.45, 1]
 
         manager.transition = SlideTransition(direction="down", duration=0.35)
@@ -116,8 +130,15 @@ class Cabecalho(BoxLayout):
 
         app = App.get_running_app()
 
-        if selection == "Perfil":
-            print("Abrindo perfil...")
+        if selection in {"Perfil", "perfil"}:
+            if app is not None and getattr(app, "root", None) is not None:
+                try:
+                    manager = app.root
+                    manager.get_screen("perfil").children[0].atualizar()
+                    manager.transition = SlideTransition(direction="left", duration=0.25)
+                    manager.current = "perfil"
+                except Exception:
+                    pass
             self.menu_perfil.dismiss()
         elif selection == "logout":
             if app is not None:
@@ -125,27 +146,28 @@ class Cabecalho(BoxLayout):
                     self.menu_perfil.dismiss()
                     return
                 app.authentication_service.logout()
+                app.refresh_user_role()
                 app.set_profile_photo()
                 self._voltar_para_login(app)
 
             self.menu_perfil.dismiss()
         elif selection == "Sair":
             if app is not None:
-                app.stop()
+                app.solicitar_saida()
             self.menu_perfil.dismiss()
+
+    def _atualizar_tema(self, _settings, _theme):
+        self.gradiente_textura = self._criar_gradiente_azul()
 
     def _criar_gradiente_azul(self):
         # Textura vertical de 1x2 pixels
         texture = Texture.create(size=(1, 2), colorfmt='rgba')
-        
-        # Pixels [R, G, B, A] de 0 a 255:
-        # Pixel 0 (Baixo) -> Azul Claro Transicional (RGB: 100, 180, 240)
-        # Pixel 1 (Cima)  -> Azul Escuro PM (RGB: 13, 74, 161)
-        pixels = bytes([
-            100, 180, 240, 255,  # Baixo
-            13,  74,  161, 255   # Cima
-        ])
-        
+        app = App.get_running_app()
+        theme = app.settings.theme if app is not None and hasattr(app, "settings") else "Claro"
+        if str(theme).casefold() in {"escuro", "dark"}:
+            pixels = bytes([6, 16, 35, 255, 21, 45, 80, 255])
+        else:
+            pixels = bytes([100, 180, 240, 255, 13, 74, 161, 255])
         texture.blit_buffer(pixels, colorfmt='rgba', bufferfmt='ubyte')
         return texture
 
@@ -171,6 +193,10 @@ class Rodape(BoxLayout):
 
     def atualizar_conexao(self):
         """Inicia a verificação de conexão em uma thread separada (para não travar a UI)."""
+        app = App.get_running_app()
+        if app is not None and app.settings.offline_mode:
+            self._aplicar_status(False)
+            return
         threading.Thread(target=self._testar_servidor, daemon=True).start()
 
     def _testar_servidor(self):
@@ -194,7 +220,11 @@ class Rodape(BoxLayout):
 
     def _aplicar_status(self, conectado):
         """Atualiza o texto e a cor no rodapé com base no resultado."""
-        if conectado:
+        app = App.get_running_app()
+        if app is not None and app.settings.offline_mode:
+            self.status_texto = f"{self.version} | Modo offline"
+            self.status_cor = [0.9, 0.7, 0.2, 1]
+        elif conectado:
             self.status_texto = f"{self.version} | Conectado"
             self.status_cor = [0.3, 0.85, 0.3, 1]  # Verde Vibrante
         else:
@@ -312,4 +342,125 @@ class BotaoHover(Button):
                 if len(BotaoHover._botoes_focados) == 0:
                     Window.set_system_cursor('arrow')
 
+class BotaoAcao(BotaoHover):
+    """Botão da interface com cápsula, contorno e estados de foco consistentes."""
+
+    variant = OptionProperty(
+        "primary", options=("primary", "secondary", "light", "danger", "quiet")
+    )
+
+
+class IconeUI(MDIcon):
+    """Ícone vetorial com nome validado e fallback visível, sem depender de emoji."""
+
+    nome = StringProperty("help-circle-outline")
+
+    def __init__(self, **kwargs):
+        requested = kwargs.pop("nome", "help-circle-outline")
+        kwargs["icon"] = "help-circle-outline"
+        kwargs.setdefault("theme_text_color", "Custom")
+        super().__init__(**kwargs)
+        self.bind(nome=self._atualizar_icone)
+        self.nome = requested
+        self._atualizar_icone(self, self.nome)
+
+    def _atualizar_icone(self, _instance, nome):
+        self.icon = nome if nome in md_icons else "help-circle-outline"
+
+
+class CampoTexto(TextInput):
+    """Campo de texto reutilizável com superfície arredondada e foco evidente."""
+
+    appearance = OptionProperty("light", options=("light", "dark"))
+    surface_color = ListProperty([.97, .98, 1, 1])
+    disabled_surface_color = ListProperty([.88, .91, .95, 1])
+    border_color = ListProperty([.78, .84, .92, 1])
+    focus_color = ListProperty([.14, .49, .91, 1])
+    text_color = ListProperty([.08, .14, .23, 1])
+    hint_color = ListProperty([.43, .51, .62, 1])
+
+    def __init__(self, **kwargs):
+        appearance = kwargs.get("appearance", "light")
+        palette = self._palette(appearance)
+        for prop, value in palette.items():
+            kwargs.setdefault(prop, value)
+        kwargs.setdefault("background_normal", "")
+        kwargs.setdefault("background_active", "")
+        kwargs.setdefault("background_color", (0, 0, 0, 0))
+        kwargs.setdefault("foreground_color", palette["text_color"])
+        kwargs.setdefault("hint_text_color", palette["hint_color"])
+        kwargs.setdefault("cursor_color", palette["focus_color"])
+        kwargs.setdefault("padding", (dp(14), dp(12)))
+        kwargs.setdefault("write_tab", False)
+        super().__init__(**kwargs)
+
+        with self.canvas.before:
+            self._surface_instruction = Color(*self.surface_color)
+            self._surface = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(12)])
+            self._border_instruction = Color(*self.border_color)
+            self._border = Line(rounded_rectangle=(*self.pos, *self.size, dp(12)), width=1.05)
+        self.bind(
+            pos=self._atualizar_visual,
+            size=self._atualizar_visual,
+            focus=self._atualizar_visual,
+            disabled=self._atualizar_visual,
+            surface_color=self._atualizar_visual,
+            disabled_surface_color=self._atualizar_visual,
+            border_color=self._atualizar_visual,
+            focus_color=self._atualizar_visual,
+            text_color=self._atualizar_tinta,
+            hint_color=self._atualizar_tinta,
+            appearance=self._aplicar_aparencia,
+        )
+        self._atualizar_visual()
+
+    @staticmethod
+    def _palette(appearance):
+        if appearance == "dark":
+            return {
+                "surface_color": [.075, .13, .23, 1],
+                "disabled_surface_color": [.10, .15, .23, 1],
+                "border_color": [.19, .31, .48, 1],
+                "focus_color": [.28, .63, 1, 1],
+                "text_color": [.94, .97, 1, 1],
+                "hint_color": [.55, .65, .82, 1],
+            }
+        return {
+            "surface_color": [.97, .98, 1, 1],
+            "disabled_surface_color": [.90, .93, .97, 1],
+            "border_color": [.78, .84, .92, 1],
+            "focus_color": [.14, .49, .91, 1],
+            "text_color": [.08, .14, .23, 1],
+            "hint_color": [.43, .51, .62, 1],
+        }
+
+    def _aplicar_aparencia(self, *_args):
+        for prop, value in self._palette(self.appearance).items():
+            setattr(self, prop, value)
+        self.foreground_color = self.text_color
+        self.hint_text_color = self.hint_color
+        self.cursor_color = self.focus_color
+        self._atualizar_visual()
+
+    def _atualizar_visual(self, *_args):
+        if not hasattr(self, "_surface_instruction"):
+            return
+        self._surface.pos = self.pos
+        self._surface.size = self.size
+        fill = self.disabled_surface_color if self.disabled else self.surface_color
+        stroke = self.focus_color if self.focus and not self.disabled else self.border_color
+        self._surface_instruction.rgba = fill
+        self._border_instruction.rgba = stroke
+        self._border.rounded_rectangle = (*self.pos, *self.size, dp(12))
+        self._border.width = 1.35 if self.focus and not self.disabled else 1.05
+
+    def _atualizar_tinta(self, *_args):
+        self.foreground_color = self.text_color
+        self.hint_text_color = self.hint_color
+        self.cursor_color = self.focus_color
+
+
+Factory.register("BotaoAcao", cls=BotaoAcao)
+Factory.register("IconeUI", cls=IconeUI)
+Factory.register("CampoTexto", cls=CampoTexto)
 Factory.register('BotaoHover', cls=BotaoHover)

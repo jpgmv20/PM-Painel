@@ -58,13 +58,18 @@
         RoundedRectangle:
             pos: self.x + dp(3), self.y - (dp(7) if root.hovering else dp(3))
             size: self.size
-            radius: [dp(14)]
+            radius: [dp(28), dp(10), dp(28), dp(10)]
         Color:
             rgba: (0.10, 0.33, 0.68, 1) if root.hovering else ((0.04, 0.14, 0.34, 0.92) if self.state == 'normal' else (0.12, 0.37, 0.75, 1))
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [dp(14)]
+            radius: [dp(28), dp(10), dp(28), dp(10)]
+        Color:
+            rgba: (.38, .74, 1, .82) if root.hovering else (.38, .74, 1, .24)
+        Line:
+            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(28), dp(10), dp(28), dp(10))
+            width: dp(1)
 
     Image:
         source: root.icone
@@ -107,15 +112,17 @@
 
     BoxLayout:
         orientation: 'vertical'
-        padding: dp(40), dp(20)
-        spacing: dp(18)
+        padding: dp(28), dp(16)
+        spacing: dp(14)
 
-        GridLayout:
-            id: menu_grid
-            cols: 4
-            padding: dp(18)
-            spacing: dp(18)
-            size_hint: 1, 1
+        ScrollView:
+            id: menu_scroll
+            do_scroll_x: True
+            do_scroll_y: False
+            scroll_type: ['bars', 'content']
+            bar_width: dp(6)
+            bar_color: 0.25, 0.50, 0.85, 0.8
+            bar_inactive_color: 0.25, 0.50, 0.85, 0.18
 
             canvas.before:
                 Color:
@@ -125,22 +132,56 @@
                     size: self.size
                     radius: [22]
 
-            CardMenu:
-                titulo: "Extensões e Configurações"
-                descricao: "Ative módulos, personalize o painel e acompanhe tudo em uma visão centralizada e prática."
-                imagem_source: "assets/img/config.jpg"
-                on_release: root.abrir_configuracoes()
+            BoxLayout:
+                id: menu_grid
+                orientation: 'horizontal'
+                padding: dp(12), dp(12), dp(30), dp(20)
+                spacing: dp(18)
+                size_hint: None, 1
+                width: self.minimum_width
+                height: menu_scroll.height
 
-            CardMenu:
-                titulo: "Conteúdo Teórico e Didático"
-                descricao: "Acesse materiais de estudo, tutoriais e recursos educacionais para aprimorar suas habilidades."
-                imagem_source: "assets/img/book.png"
-                on_release: root.abrir_materias()
+                CardMenu:
+                    titulo: "Extensões"
+                    descricao: "Acesse o catálogo, instale módulos aprovados e execute as extensões instaladas."
+                    imagem_source: "assets/img/config.jpg"
+                    size_hint: None, 1
+                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2)
+                    on_release: root.abrir_extensoes()
 
-            CardMenu:
-                titulo: "Conteúdo Prático e Aplicações"
-                descricao: "Explore exemplos práticos, projetos e aplicações para colocar em prática seus conhecimentos de forma eficiente."
-                imagem_source: "assets/img/pratic.png"
+                CardMenu:
+                    titulo: "Conteúdo Teórico e Didático"
+                    descricao: "Acesse materiais de estudo, tutoriais e recursos educacionais para aprimorar suas habilidades."
+                    imagem_source: "assets/img/book.png"
+                    size_hint: None, 1
+                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2)
+                    on_release: root.abrir_materias()
+
+                CardMenu:
+                    titulo: "Conteúdo Prático e Aplicações"
+                    descricao: "Abra matérias práticas fixas do sistema e simule circuitos interativos."
+                    imagem_source: "assets/img/pratic.png"
+                    size_hint: None, 1
+                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2)
+                    on_release: root.abrir_praticas()
+
+                CardMenu:
+                    titulo: "Configurações"
+                    descricao: "Personalize sua conta, os serviços rápidos e o comportamento do PM-Painel."
+                    imagem_source: "assets/img/config.jpg"
+                    size_hint: None, 1
+                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2)
+                    on_release: root.abrir_configuracoes()
+
+                CardMenu:
+                    titulo: "Painel de controle"
+                    descricao: "Gerencie contas de equipe e matérias sob responsabilidade de cada professor."
+                    imagem_source: "assets/img/book.png"
+                    opacity: 1 if root.is_moderator else 0
+                    disabled: not root.is_moderator
+                    size_hint: None, 1
+                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2) if root.is_moderator else dp(0)
+                    on_release: root.abrir_usuarios()
 
         AreaNavegador:
             id: browser_area

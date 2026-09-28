@@ -13,11 +13,17 @@
             radius: [dp(14)]
         StencilUse
         Color:
-            rgba: .95, .97, 1, 1
+            rgba: app.theme_surface
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [dp(14)]
+            radius: [dp(10)]
+        Color:
+            rgba: (.12, .48, .87, 1) if root.active else (.36, .51, .72, .46)
+        RoundedRectangle:
+            pos: self.x + dp(4), self.y + dp(12)
+            size: dp(4), max(dp(8), self.height - dp(24))
+            radius: [dp(2)]
     canvas.after:
         StencilUnUse
         StencilPop
@@ -25,14 +31,14 @@
         orientation: 'vertical'
         Label:
             text: root.titulo
-            color: .06, .10, .18, 1
+            color: app.theme_text
             bold: True
             font_size: '15sp'
             halign: 'left'
             text_size: self.width, None
         Label:
             text: root.descricao
-            color: .37, .43, .53, 1
+            color: app.theme_muted
             font_size: '12sp'
             halign: 'left'
             text_size: self.width, None
@@ -48,6 +54,7 @@
         size_hint: None, None
         size: dp(54), dp(32)
         active: root.active
+        disabled: root.admin_only and not app.is_moderator
         on_active: root.active = self.active
 
 <ServicoOpcao>:
@@ -60,14 +67,14 @@
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [dp(14)]
+            radius: [dp(10)]
         StencilUse
         Color:
-            rgba: .95, .97, 1, 1
+            rgba: app.theme_surface
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [dp(14)]
+            radius: [dp(10)]
     canvas.after:
         StencilUnUse
         StencilPop
@@ -81,14 +88,14 @@
         orientation: 'vertical'
         Label:
             text: root.titulo
-            color: .06, .10, .18, 1
+            color: app.theme_text
             bold: True
             font_size: '14sp'
             halign: 'left'
             text_size: self.width, None
         Label:
             text: root.descricao
-            color: .37, .43, .53, 1
+            color: app.theme_muted
             font_size: '11sp'
             halign: 'left'
             text_size: self.width, None
@@ -109,32 +116,42 @@
         BoxLayout:
             size_hint_y: None
             height: dp(54)
-            Button:
-                text: '‹'
+            BotaoAcao:
+                text: ''
+                variant: 'light'
                 size_hint: None, None
-                size: dp(42), dp(42)
-                font_size: '34sp'
-                color: .05, .20, .48, 1
-                background_normal: ''
-                background_down: ''
-                background_color: .90, .94, 1, 1
+                size: dp(52), dp(46)
                 on_release: root.voltar_para_painel(self)
+
+                IconeUI:
+                    nome: 'arrow-left'
+                    font_size: '21sp'
+                    color: .05, .20, .48, 1
+                    pos_hint: {'center_x': .5, 'center_y': .5}
             BoxLayout:
                 orientation: 'vertical'
                 padding: dp(12), 0
                 Label:
                     text: 'Personalize o comportamento do PM-Painel'
-                    color: .06, .10, .18, 1
+                    color: app.theme_text
                     bold: True
                     font_size: '22sp'
                     halign: 'left'
                     text_size: self.width, None
                 Label:
                     text: 'As alterações são salvas automaticamente neste computador.'
-                    color: .36, .41, .50, 1
+                    color: app.theme_muted
                     font_size: '12sp'
                     halign: 'left'
                     text_size: self.width, None
+        Label:
+            text: app.settings_feedback
+            color: (0.72, 0.86, 1, 1) if app.settings.theme == 'Escuro' else (0.18, 0.36, 0.62, 1)
+            font_size: '12sp'
+            size_hint_y: None
+            height: dp(22) if self.text else 0
+            halign: 'left'
+            text_size: self.width, None
         ScrollView:
             do_scroll_x: False
             bar_width: dp(8)
@@ -160,28 +177,99 @@
                         text_size: self.width, None
                     ConfiguracaoOpcao:
                         titulo: 'Iniciar PM-Painel com o Windows'
-                        descricao: 'Preparado para instalação gerenciada.'
-                        aviso: 'Requer integração de instalação e autorização administrativa.'
+                        descricao: 'Adiciona ou remove o PM-Painel da inicialização do seu usuário do Windows.'
                         key: 'start_with_windows'
                         active: app.settings.start_with_windows
                     ConfiguracaoOpcao:
-                        titulo: 'Iniciar automaticamente após login'
-                        descricao: 'Opção independente para um futuro fluxo pós-login.'
-                        aviso: 'O projeto ainda não possui login automático.'
+                        titulo: 'Abrir tela de login ao iniciar o painel'
+                        descricao: 'Abre a autenticação sem passar pela tela de boas-vindas.'
                         key: 'start_after_login'
                         active: app.settings.start_after_login
                     ConfiguracaoOpcao:
                         titulo: 'Minimizar para a bandeja'
-                        descricao: 'Mantém o painel disponível sem encerrar.'
-                        aviso: 'Preparado: não há integração com a bandeja do Windows.'
+                        descricao: 'O botão fechar oculta o painel; use o ícone da bandeja para restaurá-lo ou sair.'
                         key: 'minimize_to_tray'
                         active: app.settings.minimize_to_tray
                     ConfiguracaoOpcao:
                         titulo: 'Confirmar antes de fechar'
-                        descricao: 'Preferência pronta para o diálogo de encerramento.'
-                        aviso: 'O diálogo ainda será integrado ao ciclo de janela.'
+                        descricao: 'Mostra uma confirmação antes de encerrar o aplicativo.'
                         key: 'confirm_before_close'
                         active: app.settings.confirm_before_close
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(8)
+                    Label:
+                        text: 'Conta e funcionamento offline'
+                        color: .05, .20, .48, 1
+                        bold: True
+                        font_size: '20sp'
+                        size_hint_y: None
+                        height: dp(28)
+                        halign: 'left'
+                        text_size: self.width, None
+                    ConfiguracaoOpcao:
+                        titulo: 'Modo offline'
+                        descricao: 'Desativa ações que precisam de internet; matérias e preferências locais continuam acessíveis.'
+                        key: 'offline_mode'
+                        active: app.settings.offline_mode
+                    BoxLayout:
+                        size_hint_y: None
+                        height: dp(64)
+                        padding: dp(16), dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: app.theme_surface
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(14)]
+                        Label:
+                            text: 'Tema da interface'
+                            color: app.theme_text
+                            bold: True
+                            font_size: '15sp'
+                            halign: 'left'
+                            text_size: self.width, None
+                        Spinner:
+                            text: app.settings.theme
+                            values: ('Dark', 'Light') if app.settings.language.startswith('English') else ('Escuro', 'Claro')
+                            size_hint_x: None
+                            width: dp(160)
+                            on_text: root.set_choice('theme', self.text)
+                    BoxLayout:
+                        size_hint_y: None
+                        height: dp(64)
+                        padding: dp(16), dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: app.theme_surface
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(14)]
+                        Label:
+                            text: 'Idioma preferido'
+                            color: app.theme_text
+                            bold: True
+                            font_size: '15sp'
+                            halign: 'left'
+                            text_size: self.width, None
+                        Spinner:
+                            text: app.settings.language
+                            values: ('Português (Brasil)', 'English')
+                            size_hint_x: None
+                            width: dp(190)
+                            on_text: root.set_choice('language', self.text)
+                    Label:
+                        text: 'O conteúdo dos materiais cadastrados não é traduzido automaticamente.'
+                        color: app.theme_muted
+                        font_size: '12sp'
+                        size_hint_y: None
+                        height: dp(20)
+                        halign: 'left'
+                        text_size: self.width, None
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_y: None
@@ -198,14 +286,14 @@
                         text_size: self.width, None
                     Label:
                         text: 'Escolha os serviços que aparecerão nos acessos rápidos da Home.'
-                        color: .37, .43, .53, 1
+                        color: app.theme_muted
                         font_size: '13sp'
                         size_hint_y: None
                         height: dp(20)
                         halign: 'left'
                         text_size: self.width, None
                     GridLayout:
-                        cols: 2
+                        cols: 4 if self.width >= dp(1280) else 3 if self.width >= dp(900) else 2
                         size_hint_y: None
                         height: self.minimum_height
                         spacing: dp(10)
@@ -302,27 +390,36 @@
                         active: app.settings.fullscreen
                     ConfiguracaoOpcao:
                         titulo: 'Iniciar em modo laboratório'
-                        descricao: 'Registra a preferência para a futura política de início.'
-                        aviso: 'Preparado: o modo ainda não possui uma política global de início.'
+                        descricao: 'Ativa automaticamente as regras de laboratório ao abrir o painel.'
+                        admin_only: True
                         key: 'start_in_lab_mode'
                         active: app.settings.start_in_lab_mode
                     ConfiguracaoOpcao:
                         titulo: 'Bloquear fechamento do aplicativo'
-                        descricao: 'Política preparada para gestão administrativa.'
-                        aviso: 'Não aplicado: não há autenticação administrativa nem saída segura.'
+                        descricao: 'Impede que alunos fechem o painel quando o modo laboratório estiver ativo; moderadores podem sair.'
+                        admin_only: True
                         key: 'block_app_close'
                         active: app.settings.block_app_close
                     ConfiguracaoOpcao:
                         titulo: 'Bloquear acesso a determinadas funções'
-                        descricao: 'Ponto de extensão para permissões do laboratório.'
-                        aviso: 'Não aplicado: ainda não existem regras de permissão.'
+                        descricao: 'No modo laboratório, bloqueia o catálogo de extensões e o Git Bash para alunos.'
+                        admin_only: True
                         key: 'block_restricted_features'
                         active: app.settings.block_restricted_features
                     ConfiguracaoOpcao:
                         titulo: 'Mostrar informações do computador'
-                        descricao: 'Preferência para futura área de diagnóstico.'
+                        descricao: 'Exibe nome do dispositivo, sistema e memória neste painel.'
                         key: 'show_computer_info'
                         active: app.settings.show_computer_info
+                    Label:
+                        text: root.computer_info
+                        color: app.theme_muted
+                        font_size: '12sp'
+                        size_hint_y: None
+                        height: dp(24) if app.settings.show_computer_info else 0
+                        opacity: 1 if app.settings.show_computer_info else 0
+                        halign: 'left'
+                        text_size: self.width, None
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_y: None
@@ -339,17 +436,17 @@
                         text_size: self.width, None
                     ConfiguracaoOpcao:
                         titulo: 'Verificar atualizações automaticamente'
-                        descricao: 'Preferência pronta para o serviço de atualização.'
+                        descricao: 'Consulta as versões publicadas no GitHub quando o painel é aberto.'
                         key: 'auto_check_updates'
                         active: app.settings.auto_check_updates
                     ConfiguracaoOpcao:
                         titulo: 'Baixar atualizações automaticamente'
-                        descricao: 'Preferência pronta para integração futura.'
+                        descricao: 'Baixa instaladores publicados com SHA-256 para a próxima inicialização.'
                         key: 'auto_download_updates'
                         active: app.settings.auto_download_updates
                     ConfiguracaoOpcao:
                         titulo: 'Instalar ao reiniciar'
-                        descricao: 'Preferência pronta para integração futura.'
+                        descricao: 'Abre o instalador verificado quando o PM-Painel for iniciado novamente.'
                         key: 'install_updates_on_restart'
                         active: app.settings.install_updates_on_restart
                     BoxLayout:
@@ -358,36 +455,41 @@
                         padding: dp(16), dp(10)
                         canvas.before:
                             Color:
-                                rgba: .95, .97, 1, 1
+                                rgba: app.theme_surface
                             RoundedRectangle:
                                 pos: self.pos
                                 size: self.size
                                 radius: [dp(14)]
                         Label:
                             text: 'Canal de atualização'
-                            color: .06, .10, .18, 1
+                            color: app.theme_text
                             bold: True
                             font_size: '15sp'
                             halign: 'left'
                             text_size: self.width, None
                         Spinner:
                             text: app.settings.update_channel
-                            values: ('Estável', 'Beta', 'Desenvolvimento')
+                            values: ('Stable', 'Beta', 'Development') if app.settings.language.startswith('English') else ('Estável', 'Beta', 'Desenvolvimento')
                             size_hint_x: None
                             width: dp(160)
                             on_text: root.set_choice('update_channel', self.text)
-                    Button:
+                    BotaoAcao:
+                        variant: 'primary'
                         text: 'Verificar atualizações agora'
                         size_hint_y: None
-                        height: dp(48)
-                        background_normal: ''
-                        background_down: ''
-                        background_color: .07, .25, .56, 1
-                        bold: True
+                        height: dp(50)
                         on_release: root.verificar_atualizacoes()
+                    BotaoAcao:
+                        variant: 'secondary'
+                        text: 'Abrir página de lançamentos'
+                        size_hint_y: None
+                        height: dp(46) if root.latest_update_url else 0
+                        opacity: 1 if root.latest_update_url else 0
+                        disabled: not root.latest_update_url
+                        on_release: root.abrir_pagina_atualizacoes()
                     Label:
                         text: root.update_status
-                        color: .48, .34, .08, 1
+                        color: app.theme_text
                         font_size: '12sp'
                         size_hint_y: None
                         height: self.texture_size[1] if self.text else 0
@@ -426,49 +528,55 @@
                     ConfiguracaoOpcao:
                         titulo: 'Modo laboratório'
                         descricao: 'Ativa as preferências desta seção.'
+                        admin_only: True
                         key: 'laboratory_mode'
                         active: app.settings.laboratory_mode
                     ConfiguracaoOpcao:
                         titulo: 'Limpar sessões ao sair'
-                        descricao: 'Limpa a sessão Google do painel ao encerrar.'
+                        descricao: 'Apaga a sessão local e o passe de acesso offline ao encerrar.'
+                        admin_only: True
                         key: 'clear_sessions_on_exit'
                         active: app.settings.clear_sessions_on_exit
                     ConfiguracaoOpcao:
                         titulo: 'Limpar navegador temporário'
-                        descricao: 'Remove o perfil efêmero do navegador ao sair.'
+                        descricao: 'Remove os cookies e dados do navegador temporário ao encerrar.'
+                        admin_only: True
                         key: 'clear_temporary_browser'
                         active: app.settings.clear_temporary_browser
                     ConfiguracaoOpcao:
                         titulo: 'Limpar sessões abandonadas ao iniciar'
-                        descricao: 'Remove na próxima abertura perfis deixados por falha ou desligamento.'
+                        descricao: 'Remove perfis temporários deixados por falha ou desligamento inesperado.'
+                        admin_only: True
                         key: 'clear_abandoned_sessions'
                         active: app.settings.clear_abandoned_sessions
                     ConfiguracaoOpcao:
                         titulo: 'Bloquear persistência de login'
-                        descricao: 'O navegador já usa perfil temporário isolado.'
+                        descricao: 'Abre os atalhos do navegador em modo privado e remove os dados ao sair.'
+                        admin_only: True
                         key: 'prevent_login_persistence'
                         active: app.settings.prevent_login_persistence
                     BoxLayout:
                         size_hint_y: None
                         height: dp(64)
+                        disabled: not app.is_moderator
                         padding: dp(16), dp(10)
                         canvas.before:
                             Color:
-                                rgba: .95, .97, 1, 1
+                                rgba: app.theme_surface
                             RoundedRectangle:
                                 pos: self.pos
                                 size: self.size
                                 radius: [dp(14)]
                         Label:
                             text: 'Tempo máximo de sessão'
-                            color: .06, .10, .18, 1
+                            color: app.theme_text
                             bold: True
                             font_size: '15sp'
                             halign: 'left'
                             text_size: self.width, None
                         Spinner:
-                            text: app.settings.maximum_session_time
-                            values: ('30 minutos', '1 hora', '2 horas', '4 horas', '8 horas', 'Ilimitado')
+                            text: root.session_time_label(app.settings.maximum_session_time, app.settings.language)
+                            values: ('30 minutes', '1 hour', '2 hours', '4 hours', '8 hours', 'Unlimited') if app.settings.language.startswith('English') else ('30 minutos', '1 hora', '2 horas', '4 horas', '8 horas', 'Ilimitado')
                             size_hint_x: None
                             width: dp(160)
                             on_text: root.set_choice('maximum_session_time', self.text)

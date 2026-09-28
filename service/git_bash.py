@@ -17,12 +17,18 @@ class GitBashManager:
 
     _PROFILE_PREFIX = "pm-painel-git-"
 
-    def __init__(self, base_temp_dir: Optional[str | Path] = None) -> None:
+    def __init__(
+        self,
+        base_temp_dir: Optional[str | Path] = None,
+        cleanup_abandoned_profiles: bool = True,
+    ) -> None:
         temporary_root = Path(base_temp_dir) if base_temp_dir else Path(tempfile.gettempdir())
         self._profiles_root = temporary_root / "pm-painel-git-profiles"
         self._profiles_root.mkdir(parents=True, exist_ok=True)
+        if cleanup_abandoned_profiles:
+            self._remove_abandoned_profiles()
         self._profile_dir = Path(
-            tempfile.mkdtemp(prefix=self._PROFILE_PREFIX, dir=self._profiles_root)
+            tempfile.mkdtemp(prefix=f"{self._PROFILE_PREFIX}{os.getpid()}-", dir=self._profiles_root)
         )
         self._processes: list[subprocess.Popen[bytes]] = []
         self._destroyed = False
@@ -81,6 +87,27 @@ class GitBashManager:
             self._profiles_root.rmdir()
         except OSError:
             pass
+
+    def _remove_abandoned_profiles(self) -> None:
+        for candidate in self._profiles_root.iterdir():
+            if candidate.is_dir() and candidate.name.startswith(self._PROFILE_PREFIX):
+                owner_text = candidate.name[len(self._PROFILE_PREFIX):].split("-", 1)[0]
+                try:
+                    owner_pid = int(owner_text)
+                except ValueError:
+                    owner_pid = 0
+                if not owner_pid or not self._process_is_running(owner_pid):
+                    shutil.rmtree(candidate, ignore_errors=True)
+
+    @staticmethod
+    def _process_is_running(pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+            return True
+        except PermissionError:
+            return True
+        except OSError:
+            return False
 
     @staticmethod
     def _find_git_bash() -> Path:

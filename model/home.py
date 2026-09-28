@@ -104,8 +104,13 @@ class AreaNavegador(BoxLayout):
 
     def abrir_git_bash(self) -> None:
         """Abre o terminal Git Bash com dados descartados ao fechar o painel."""
+        app = App.get_running_app()
+        if app.feature_blocked_for_current_user():
+            self.status_texto = "O Git Bash está bloqueado pelas regras deste laboratório."
+            app._show_message("Função bloqueada", self.status_texto)
+            return
         try:
-            App.get_running_app().git_bash_manager.open_git_bash()
+            app.git_bash_manager.open_git_bash()
             self.status_texto = "Git Bash aberto com perfil temporário."
         except (RuntimeError, ValueError) as error:
             self.status_texto = str(error)
@@ -113,6 +118,25 @@ class AreaNavegador(BoxLayout):
 
 class TelaPrincipal(LayoutFundo):
     """Tela principal que constrói os cartões a partir da configuração do menu."""
+
+    is_moderator = BooleanProperty(False)
+
+    def on_kv_post(self, _base_widget) -> None:
+        self.refresh_access()
+        self.ids.browser_area.configurar_browser()
+        settings = App.get_running_app().settings
+        for field in (
+            "show_google", "show_youtube", "show_outlook", "show_git", "show_classroom",
+            "show_teams", "show_word", "show_excel", "show_onedrive", "show_google_drive",
+            "show_discord", "show_github",
+        ):
+            settings.bind(**{field: self.ids.browser_area.atualizar_atalhos})
+
+    def refresh_access(self) -> None:
+        app = App.get_running_app()
+        self.is_moderator = app.permission_service.perfil_pode_gerenciar_usuarios(
+            app.session_manager.user
+        )
 
     def atualizar_foto_perfil(self, caminho: str) -> None:
         """Encaminha a foto local para o cabeçalho da tela principal."""
@@ -125,20 +149,44 @@ class TelaPrincipal(LayoutFundo):
         manager.transition = SlideTransition(direction="left", duration=0.25)
         manager.current = "configuracoes"
 
-    def abrir_materias(self) -> None:
+    def abrir_extensoes(self) -> None:
+        app = App.get_running_app()
+        if app.feature_blocked_for_current_user():
+            app._show_message(
+                "Função bloqueada",
+                "O catálogo de extensões está bloqueado para alunos neste laboratório.",
+            )
+            return
+        manager = app.root
+        manager.transition = SlideTransition(direction="left", duration=0.25)
+        manager.get_screen("extensoes").children[0].atualizar()
+        manager.current = "extensoes"
+
+    def abrir_usuarios(self) -> None:
+        app = App.get_running_app()
+        if not app.permission_service.perfil_pode_gerenciar_usuarios(app.session_manager.user):
+            return
+        manager = app.root
+        manager.transition = SlideTransition(direction="left", duration=0.25)
+        manager.get_screen("usuarios").children[0].atualizar()
+        manager.current = "usuarios"
+
+    def abrir_perfil(self) -> None:
+        manager = App.get_running_app().root
+        manager.transition = SlideTransition(direction="left", duration=0.25)
+        manager.get_screen("perfil").children[0].atualizar()
+        manager.current = "perfil"
+
+    def abrir_materias(self, secao: str = "feed") -> None:
         """Abre o módulo local de conteúdos teóricos e didáticos."""
         manager = App.get_running_app().root
         manager.transition = SlideTransition(direction="left", duration=0.25)
         tela = manager.get_screen("materias").children[0]
-        tela.atualizar()
+        tela.atualizar(secao)
         manager.current = "materias"
 
-    def on_kv_post(self, _base_widget) -> None:
-        self.ids.browser_area.configurar_browser()
-        settings = App.get_running_app().settings
-        for field in (
-            "show_google", "show_youtube", "show_outlook", "show_git", "show_classroom",
-            "show_teams", "show_word", "show_excel", "show_onedrive", "show_google_drive",
-            "show_discord", "show_github",
-        ):
-            settings.bind(**{field: self.ids.browser_area.atualizar_atalhos})
+    def abrir_praticas(self) -> None:
+        """Abre o catálogo fixo de laboratórios práticos do sistema."""
+        manager = App.get_running_app().root
+        manager.transition = SlideTransition(direction="left", duration=0.25)
+        manager.current = "praticas"

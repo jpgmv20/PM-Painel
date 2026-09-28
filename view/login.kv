@@ -6,34 +6,92 @@
         id: cabecalho
 
     BoxLayout:
-        orientation: 'vertical'
-        padding: dp(24)
+        orientation: 'horizontal'
+        padding: dp(24), dp(18)
+        spacing: dp(24)
+
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_x: .38 if root.width >= dp(940) else 0
+            opacity: 1 if root.width >= dp(940) else 0
+            padding: dp(40), dp(32)
+            spacing: dp(18)
+            canvas.before:
+                Color:
+                    rgba: .035, .13, .30, .96
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [dp(64), dp(18), dp(64), dp(18)]
+                Color:
+                    rgba: .18, .58, .94, .24
+                Ellipse:
+                    pos: self.right - dp(170), self.top - dp(170)
+                    size: dp(240), dp(240)
+                Color:
+                    rgba: .34, .77, 1, .28
+                Line:
+                    points: [self.x + dp(38), self.y + dp(55), self.x + dp(155), self.y + dp(55), self.x + dp(206), self.y + dp(106)]
+                    width: dp(1.2)
+
+            Widget:
+                size_hint_y: .7
+
+            IconeUI:
+                nome: 'account-group'
+                size_hint: None, None
+                font_size: '66sp'
+                color: .48, .80, 1, 1
+
+            Label:
+                text: 'PM - Painel'
+                color: 1, 1, 1, 1
+                bold: True
+                font_size: '34sp'
+                size_hint_y: None
+                height: dp(46)
+                halign: 'left'
+                text_size: self.size
+
+            Label:
+                text: 'A sala da sua equipe, sempre à mão.'
+                color: .80, .89, 1, 1
+                font_size: '18sp'
+                halign: 'left'
+                valign: 'top'
+                text_size: self.width, None
+                size_hint_y: None
+                height: dp(70)
+
+            Widget:
+                size_hint_y: .9
 
         AnchorLayout:
             anchor_x: 'center'
             anchor_y: 'center'
+            size_hint_x: .62 if root.width >= dp(940) else 1
 
             BoxLayout:
                 orientation: 'vertical'
                 size_hint: None, None
-                width: min(root.width - dp(48), dp(420))
+                width: min(dp(500), root.width * .48) if root.width >= dp(940) else min(dp(500), root.width - dp(72))
                 height: self.minimum_height
-                padding: dp(32), dp(28)
+                padding: dp(34), dp(30)
                 spacing: dp(14)
 
                 canvas.before:
                     Color:
                         rgba: 0.03, 0.10, 0.22, 0.16
                     RoundedRectangle:
-                        pos: self.x + dp(4), self.y - dp(6)
+                        pos: self.x + dp(8), self.y - dp(9)
                         size: self.size
-                        radius: [dp(20)]
+                        radius: [dp(32)]
                     Color:
                         rgba: 1, 1, 1, 0.97
                     RoundedRectangle:
                         pos: self.pos
                         size: self.size
-                        radius: [dp(20)]
+                        radius: [dp(32)]
 
                 Image:
                     source: 'assets/icon/google.png'
@@ -43,7 +101,7 @@
                     fit_mode: 'contain'
 
                 Label:
-                    text: 'Bem-vindo!'
+                    text: 'Bem-vindo de volta'
                     color: 0.06, 0.10, 0.18, 1
                     bold: True
                     font_size: '28sp'
@@ -53,7 +111,7 @@
                     height: self.texture_size[1]
 
                 Label:
-                    text: 'Entre com sua conta Google para acessar o painel de controle.'
+                    text: 'Acesse suas aulas, arquivos e conversas de equipe.'
                     color: 0.35, 0.39, 0.46, 1
                     font_size: '15sp'
                     halign: 'center'
@@ -62,22 +120,52 @@
                     size_hint_y: None
                     height: self.texture_size[1]
 
-                Button:
+                CampoTexto:
+                    id: email_input
+                    hint_text: 'E-mail'
+                    multiline: False
+                    size_hint_y: None
+                    height: dp(48)
+
+                CampoTexto:
+                    id: password_input
+                    hint_text: 'Senha'
+                    password: True
+                    multiline: False
+                    size_hint_y: None
+                    height: dp(48)
+
+                BotaoAcao:
+                    variant: 'primary'
+                    text: 'Entrar com e-mail e senha'
+                    size_hint_y: None
+                    height: dp(50)
+                    color: 1, 1, 1, 1
+                    on_release: root.login_com_senha()
+
+                BotaoAcao:
+                    variant: 'light'
+                    text: 'Criar conta de aluno'
+                    size_hint_y: None
+                    height: dp(46)
+                    color: .05, .20, .48, 1
+                    on_release: root.abrir_cadastro()
+
+                Label:
+                    text: 'ou entre com sua conta institucional'
+                    color: 0.47, 0.50, 0.56, 1
+                    font_size: '12sp'
+                    halign: 'center'
+                    size_hint_y: None
+                    height: dp(20)
+
+                BotaoAcao:
+                    variant: 'secondary'
                     text: ''
-                    background_color: 0, 0, 0, 0
-                    background_normal: ''
                     disabled: root.login_em_andamento
                     size_hint_y: None
-                    height: dp(52)
+                    height: dp(50)
                     on_release: root.login_google()
-
-                    canvas.before:
-                        Color:
-                            rgba: (.20, .20, .20, .65) if self.disabled else (.14, .18, .24, 1)
-                        RoundedRectangle:
-                            pos: self.pos
-                            size: self.size
-                            radius: [dp(14)]
 
                     AnchorLayout:
                         size: self.parent.size

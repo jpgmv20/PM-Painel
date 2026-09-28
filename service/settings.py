@@ -33,6 +33,9 @@ class SettingsStore(EventDispatcher):
     show_github = BooleanProperty(True)
 
     fullscreen = BooleanProperty(True)
+    offline_mode = BooleanProperty(False)
+    theme = StringProperty("Escuro")
+    language = StringProperty("Português (Brasil)")
     start_in_lab_mode = BooleanProperty(False)
     block_app_close = BooleanProperty(False)
     block_restricted_features = BooleanProperty(False)
@@ -60,6 +63,7 @@ class SettingsStore(EventDispatcher):
         "auto_download_updates", "install_updates_on_restart", "update_channel",
         "laboratory_mode", "clear_sessions_on_exit", "clear_temporary_browser",
         "clear_abandoned_sessions", "prevent_login_persistence", "maximum_session_time",
+        "offline_mode", "theme", "language",
     )
 
     def __init__(self, path: str | Path | None = None, **kwargs: Any) -> None:

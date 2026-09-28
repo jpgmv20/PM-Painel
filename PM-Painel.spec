@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_submodules
+from kivymd import fonts_path
 
 project_dir = Path(SPECPATH)
 
@@ -19,6 +20,7 @@ hiddenimports += collect_submodules("plugins")
 hiddenimports += collect_submodules("core")
 hiddenimports += collect_submodules("data")
 hiddenimports += collect_submodules("database")
+hiddenimports += ["win32api", "win32con", "win32gui", "win32process"]
 
 
 # ============================================================
@@ -33,6 +35,7 @@ datas = [
     ("database", "database"),
     ("docs", "docs"),
 ]
+datas.append((str(Path(fonts_path) / "materialdesignicons-webfont.ttf"), "kivymd/fonts"))
 
 
 # ============================================================

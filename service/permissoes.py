@@ -34,3 +34,42 @@ class PermissionService:
 
     def perfil_pode_editar_materias(self, profile: Mapping[str, Any] | None) -> bool:
         return self.papel_do_perfil(profile) in {Papel.PROFESSOR, Papel.MODERADOR}
+
+    def perfil_pode_editar_conteudo(
+        self, profile: Mapping[str, Any] | None, materia_id: str,
+        criado_por_email: str | None = None,
+    ) -> bool:
+        """Professores editam suas equipes e matérias associadas; moderadores editam todas."""
+        profile = profile or {}
+        role = self.papel_do_perfil(profile)
+        if role == Papel.MODERADOR:
+            return True
+        if role != Papel.PROFESSOR:
+            return False
+        email = str(profile.get("email") or "").strip().casefold()
+        if criado_por_email and email == criado_por_email.strip().casefold():
+            return True
+        assigned = profile.get("materias_responsaveis") or profile.get("subject_ids") or []
+        return materia_id in {str(item) for item in assigned}
+
+    def perfil_pode_gerenciar_materias(
+        self, profile: Mapping[str, Any] | None, criado_por_email: str | None = None
+    ) -> bool:
+        """Professores administram equipes próprias; moderadores podem administrar todas."""
+        profile = profile or {}
+        role = self.papel_do_perfil(profile)
+        if role == Papel.MODERADOR:
+            return True
+        if role != Papel.PROFESSOR:
+            return False
+        if criado_por_email is None:
+            return True  # Autoriza criar uma nova equipe.
+        email = str(profile.get("email") or "").strip().casefold()
+        owner_email = criado_por_email.strip().casefold()
+        return bool(email and owner_email) and email == owner_email
+
+    def perfil_pode_gerenciar_usuarios(self, profile: Mapping[str, Any] | None) -> bool:
+        return self.papel_do_perfil(profile) == Papel.MODERADOR
+
+    def perfil_pode_aprovar_extensoes(self, profile: Mapping[str, Any] | None) -> bool:
+        return self.papel_do_perfil(profile) in {Papel.PROFESSOR, Papel.MODERADOR}

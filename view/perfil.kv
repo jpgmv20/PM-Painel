@@ -1,0 +1,87 @@
+#:import dp kivy.metrics.dp
+
+<TelaPerfil>:
+    orientation: 'vertical'
+    spacing: dp(12)
+    padding: dp(28), dp(18)
+
+    Cabecalho:
+        titulo: 'Perfil do usuário'
+
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint: .72, None
+        height: self.minimum_height
+        pos_hint: {'center_x': .5, 'center_y': .5}
+        padding: dp(22)
+        spacing: dp(12)
+        canvas.before:
+            Color:
+                rgba: .045, .075, .13, .96
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [dp(16)]
+
+        Label:
+            text: 'Seus dados'
+            color: 1, 1, 1, 1
+            bold: True
+            font_size: '22sp'
+            size_hint_y: None
+            height: dp(32)
+            halign: 'left'
+            text_size: self.size
+
+        CampoTexto:
+            id: nome_input
+            hint_text: 'Nome'
+            multiline: False
+            size_hint_y: None
+            height: dp(44)
+            appearance: 'dark'
+
+        Label:
+            text: 'E-mail: ' + root.email
+            color: .84, .89, .97, 1
+            size_hint_y: None
+            height: dp(28)
+            halign: 'left'
+            text_size: self.size
+
+        Label:
+            text: 'Perfil: ' + root.papel.capitalize()
+            color: .84, .89, .97, 1
+            size_hint_y: None
+            height: dp(28)
+            halign: 'left'
+            text_size: self.size
+
+        Label:
+            text: root.sessao_status
+            color: .58, .78, 1, 1
+            size_hint_y: None
+            height: dp(28)
+            halign: 'left'
+            text_size: self.size
+
+        Label:
+            text: root.mensagem
+            color: .48, .88, .62, 1
+            size_hint_y: None
+            height: dp(26)
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(44)
+            spacing: dp(10)
+            BotaoAcao:
+                text: 'Voltar'
+                variant: 'secondary'
+                on_release: root.voltar()
+            BotaoAcao:
+                text: 'Salvar perfil'
+                variant: 'primary'
+                on_release: root.salvar()
+
+    Widget:
