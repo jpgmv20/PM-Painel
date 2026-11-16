@@ -3,21 +3,66 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import partial
+from pathlib import Path
 
+from kivy.app import App
 from kivy.graphics import Color, Ellipse, Line, RoundedRectangle
 from kivy.metrics import dp
 from kivy.properties import StringProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 from kivy.clock import Clock
 
-from model.componentes import BotaoAcao, Cabecalho, LayoutFundo, Rodape
+from model.componentes import BotaoAcao, Cabecalho, IconeUI, LayoutFundo, Rodape
+from model.tema_praticas import aplicar_tema_arvore, paleta_praticas, registrar_cor_texto, registrar_fundo, tema_escuro
+
+
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+
+
+def _caminho_icone(imagem: str | None, chave: str | None = None) -> str:
+    """Só aceita arquivos locais da pasta de ícones do projeto."""
+    icon_root = (PROJECT_DIR / "assets" / "icon").resolve()
+    candidates = []
+    if imagem:
+        raw = Path(imagem)
+        candidates.append((PROJECT_DIR / raw).resolve() if raw.is_absolute() else (
+            PROJECT_DIR / raw if raw.parts and raw.parts[0].casefold() == "assets"
+            else icon_root / raw
+        ).resolve())
+    if chave:
+        stem = Path(chave).name
+        if Path(stem).suffix:
+            candidates.append((icon_root / stem).resolve())
+        else:
+            candidates.extend((icon_root / f"{stem}{extension}").resolve()
+                              for extension in (".png", ".jpg", ".jpeg", ".webp", ".svg"))
+    for candidate in candidates:
+        try:
+            candidate.relative_to(icon_root)
+        except ValueError:
+            continue
+        if candidate.is_file():
+            return str(candidate)
+    return ""
+
+
+def _icone_conteudo(imagem: str | None, simbolo: str, tamanho=dp(44), chave: str | None = None):
+    source = _caminho_icone(imagem, chave)
+    if source:
+        return Image(source=source, size_hint=(None, None), size=(tamanho, tamanho),
+                     allow_stretch=True, keep_ratio=True)
+    return IconeUI(nome=simbolo, size_hint=(None, None), size=(tamanho, tamanho),
+                   font_size=tamanho * .72, color=paleta_praticas()["accent"])
 
 
 ATIVIDADE_PORTAS_DISPLAY = "portas-logicas-display-7-segmentos"
+ATIVIDADE_REDES_OSI_IP = "redes1-osi-enderecamento-ip"
+ATIVIDADE_REDES_TERMINAIS = "redes1-rede-local-terminais"
 
 # Matérias práticas fazem parte do programa do PM-Painel. Professores não
 # criam, editam nem removem itens deste catálogo.
@@ -25,17 +70,54 @@ PRACTICAS_FIXAS = (
     {
         "id": "arquitetura-de-computadores",
         "titulo": "Arquitetura de Computadores",
+        "icone": "memory",
+        "imagem": "",
         "descricao": "Sistemas digitais, lógica booleana, circuitos e organização de computadores.",
         "atividades": (
             {
                 "id": ATIVIDADE_PORTAS_DISPLAY,
                 "titulo": "Portas lógicas e display de 7 segmentos",
+                "icone": "chip",
+                "imagem": "",
                 "descricao": (
                     "Monte e simule um circuito digital. Alterne as entradas BCD, conecte portas "
                     "lógicas e observe os segmentos do display em tempo real."
                 ),
                 "nivel": "Iniciante",
                 "tempo": "15 a 25 min",
+            },
+        ),
+    },
+    {
+        "id": "redes-1",
+        "titulo": "Redes I",
+        "icone": "lan",
+        "imagem": "",
+        "descricao": "Modelo OSI, endereçamento IPv4 e IPv6, máscaras, sub-redes e comunicação em rede local.",
+        "atividades": (
+            {
+                "id": ATIVIDADE_REDES_OSI_IP,
+                "titulo": "Modelo OSI, Roteamento e Calculadora de IP",
+                "icone": "ip-network",
+                "imagem": "",
+                "descricao": (
+                    "Bancada prática de encapsulamento OSI (PDU), cálculo bitwise AND de sub-redes, "
+                    "teste prático de roteamento e calculadora CIDR IPv4/IPv6."
+                ),
+                "nivel": "Iniciante",
+                "tempo": "15 a 25 min",
+            },
+            {
+                "id": ATIVIDADE_REDES_TERMINAIS,
+                "titulo": "Rede local com dois containers Docker",
+                "icone": "console-line",
+                "imagem": "",
+                "descricao": (
+                    "Configure dois consoles Bash Debian reais e pratique endereçamento, ping, DNS e captura de pacotes "
+                    "em uma LAN interna do Docker."
+                ),
+                "nivel": "Intermediário",
+                "tempo": "20 a 30 min",
             },
         ),
     },
@@ -186,6 +268,7 @@ class EditorCircuito(Widget):
         self._labels: dict[str, Label] = {}
         self._pin_labels: dict[tuple[str, str], Label] = {}
         self._pin_pendente: tuple[str, str] | None = None
+        self._mouse_pos: tuple[float, float] | None = None
         self._arrastando: dict | None = None
         self._segmentos_display: frozenset[str] = frozenset()
         self._digito: int | None = 0
@@ -196,6 +279,24 @@ class EditorCircuito(Widget):
         self._criar_exemplo()
         self.bind(pos=self._redesenhar, size=self._redesenhar)
         Clock.schedule_once(self._redesenhar, 0)
+
+    def on_parent(self, _widget, parent):
+        from kivy.core.window import Window
+        if parent:
+            try:
+                Window.bind(mouse_pos=self._on_mouse_pos)
+            except Exception:
+                pass
+        else:
+            try:
+                Window.unbind(mouse_pos=self._on_mouse_pos)
+            except Exception:
+                pass
+
+    def _on_mouse_pos(self, _window, pos):
+        if self._pin_pendente is not None:
+            self._mouse_pos = (pos[0], pos[1])
+            self._desenhar_canvas()
 
     def _novo_componente(self, kind: str, nome: str, nx: float, ny: float, **data) -> dict:
         self._contador += 1
@@ -231,6 +332,7 @@ class EditorCircuito(Widget):
             self.fios.append({"origem": (decoder["id"], segment), "destino": (display["id"], segment)})
         self.selecionado = None
         self._pin_pendente = None
+        self._mouse_pos = None
         self.fio_selecionado = None
         self._segmentos_display = frozenset()
         self._digito = 0
@@ -290,6 +392,7 @@ class EditorCircuito(Widget):
         self.selecionado = None
         self.fio_selecionado = None
         self._pin_pendente = None
+        self._mouse_pos = None
         self.status_texto = "Seleção limpa. O circuito continua atualizando ao vivo."
         self._redesenhar()
 
@@ -394,9 +497,10 @@ class EditorCircuito(Widget):
     def _redesenhar(self, *_args):
         if self.width <= 0 or self.height <= 0:
             return
+        colors = paleta_praticas()
         for component in self.componentes:
             if component["id"] not in self._labels:
-                label = Label(color=(.08, .16, .28, 1), bold=True, halign="center", valign="middle", font_size="10sp")
+                label = Label(color=colors["text"], bold=True, halign="center", valign="middle", font_size="10sp")
                 self._labels[component["id"]] = label
                 self.add_widget(label)
             label = self._labels[component["id"]]
@@ -411,7 +515,7 @@ class EditorCircuito(Widget):
             elif component["kind"] == "input":
                 level = "ALTO · 1" if component["value"] else "BAIXO · 0"
                 label.text = f"{component['nome']}\n{component['bit']}  |  {level}"
-                label.color = (.06, .21, .37, 1)
+                label.color = colors["text"]
                 label.font_size = "9sp"
                 label.size = (width, height)
                 label.pos = (x, y)
@@ -419,14 +523,14 @@ class EditorCircuito(Widget):
                 output = int(self._resultado.saidas.get((component["id"], "Q"), False))
                 inputs = "A -> Q" if component["gate"] == "NOT" else "A, B -> Q"
                 label.text = f"{component['gate']}\n{inputs}\nQ = {output}"
-                label.color = (.06, .21, .37, 1)
+                label.color = colors["text"]
                 label.font_size = "10sp"
                 label.size = (width, height)
                 label.pos = (x, y)
             elif component["kind"] == "decoder":
                 bits = {name: int(self._resultado.bcd.get(name, False)) for name in "ABCD"}
                 label.text = f"74LS47 · BCD\nA={bits['A']}  B={bits['B']}\nC={bits['C']}  D={bits['D']}"
-                label.color = (.06, .21, .37, 1)
+                label.color = colors["text"]
                 label.font_size = "9sp"
                 label.size = (width, height)
                 label.pos = (x, y)
@@ -448,20 +552,23 @@ class EditorCircuito(Widget):
                 key = (component["id"], pin)
                 label = self._pin_labels.get(key)
                 if label is None:
-                    label = Label(color=(.21, .33, .50, 1), bold=True, font_size="8sp",
+                    label = Label(color=paleta_praticas()["muted"], bold=True, font_size="8sp",
                                   halign="center", valign="middle")
                     self._pin_labels[key] = label
                     self.add_widget(label)
+                label.color = paleta_praticas()["muted"]
                 label.text = pin
                 label.size = (dp(18), dp(13))
                 label.pos = (px - dp(19), py - dp(7)) if direction == "out" else (px + dp(2), py - dp(7))
 
     def _desenhar_canvas(self):
+        colors = paleta_praticas()
+        dark = colors["shell"][0] < .5
         self.canvas.before.clear()
         with self.canvas.before:
-            Color(.94, .97, 1, 1)
+            Color(*colors["card"])
             RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(12)])
-            Color(.78, .84, .92, 1)
+            Color(*colors["grid"])
             step = self.PASSO_GRADE
             start_x = self.x + (step - (self.x % step)) % step
             start_y = self.y + (step - (self.y % step)) % step
@@ -494,23 +601,46 @@ class EditorCircuito(Widget):
                 Ellipse(pos=(middle_x - dp(3), source_pin[1] - dp(3)), size=(dp(6), dp(6)))
                 Ellipse(pos=(middle_x - dp(3), target_pin[1] - dp(3)), size=(dp(6), dp(6)))
 
+            # Fio temporário dinâmico seguindo o mouse enquanto o usuário conecta pinos
+            if self._pin_pendente is not None and self._mouse_pos is not None:
+                source_comp = self._componente(self._pin_pendente[0])
+                if source_comp:
+                    source_pin_info = self._pinos(source_comp).get(self._pin_pendente[1])
+                    if source_pin_info:
+                        sp_x, sp_y, _ = source_pin_info
+                        mp_x, mp_y = self._mouse_pos
+                        mid_x = (sp_x + mp_x) / 2
+                        Color(1, .78, .20, 0.95)
+                        Line(points=(sp_x, sp_y, mid_x, sp_y, mid_x, mp_y, mp_x, mp_y), width=dp(2.2))
+                        Color(1, .88, .35, 1)
+                        Ellipse(pos=(sp_x - dp(4), sp_y - dp(4)), size=(dp(8), dp(8)))
+                        Ellipse(pos=(mp_x - dp(4.5), mp_y - dp(4.5)), size=(dp(9), dp(9)))
+                        Color(1, .70, .15, 0.5)
+                        Line(circle=(mp_x, mp_y, dp(7)), width=dp(1.2))
+
             # Símbolos dos componentes.
             for component in self.componentes:
                 x, y, width, height = self._retangulo(component)
                 selected = component["id"] == self.selecionado
                 kind = component["kind"]
                 if kind == "input":
-                    Color(.77, .91, .99, 1) if component["value"] else Color(.90, .94, .98, 1)
+                    if component["value"]:
+                        Color(.15, .35, .45, 1) if dark else Color(.77, .91, .99, 1)
+                    else:
+                        Color(.18, .23, .31, 1) if dark else Color(.90, .94, .98, 1)
                 elif kind == "display":
-                    Color(.08, .14, .24, 1)
+                    Color(.035, .055, .085, 1) if dark else Color(.08, .14, .24, 1)
                 elif kind == "decoder":
-                    Color(.87, .93, .99, 1)
+                    Color(.16, .21, .30, 1) if dark else Color(.87, .93, .99, 1)
                 elif selected:
-                    Color(.78, .89, 1, 1)
+                    Color(.18, .31, .48, 1) if dark else Color(.78, .89, 1, 1)
                 else:
-                    Color(.98, .99, 1, 1)
+                    Color(.13, .18, .26, 1) if dark else Color(.98, .99, 1, 1)
                 RoundedRectangle(pos=(x, y), size=(width, height), radius=[dp(9)])
-                Color(.05, .27, .55, 1) if selected else Color(.29, .40, .56, 1)
+                if selected:
+                    Color(.35, .68, 1, 1) if dark else Color(.05, .27, .55, 1)
+                else:
+                    Color(.30, .40, .55, 1) if dark else Color(.29, .40, .56, 1)
                 Line(rounded_rectangle=(x, y, width, height, dp(9)), width=dp(2) if selected else dp(1.2))
 
                 if kind == "display":
@@ -524,7 +654,7 @@ class EditorCircuito(Widget):
                     elif self._pin_pendente == (component["id"], pin_name):
                         Color(1, .64, .12, 1)
                     else:
-                        Color(.12, .30, .50, 1)
+                        Color(.48, .60, .77, 1) if dark else Color(.12, .30, .50, 1)
                     Ellipse(pos=(px - dp(3.3), py - dp(3.3)), size=(dp(6.6), dp(6.6)))
 
                 if kind == "input":
@@ -550,7 +680,7 @@ class EditorCircuito(Widget):
         }
         active_segments = self._resultado.segmentos_por_display.get(display_id, frozenset())
         for segment, geometry in positions.items():
-            Color(.13, .75, .97, 1) if segment in active_segments else Color(.20, .27, .37, 1)
+            Color(.13, .75, .97, 1) if segment in active_segments else (Color(.24, .32, .44, 1) if paleta_praticas()["shell"][0] < .5 else Color(.20, .27, .37, 1))
             RoundedRectangle(pos=geometry[:2], size=geometry[2:], radius=[thickness / 2])
 
     def _avaliar(self):
@@ -593,6 +723,7 @@ class EditorCircuito(Widget):
         self.fios = [wire for wire in self.fios if wire["destino"] != target]
         self.fios.append({"origem": source, "destino": target})
         self._pin_pendente = None
+        self._mouse_pos = None
         self.fio_selecionado = len(self.fios) - 1
         self._solicitar_avaliacao(f"Fio conectado: {source_component['nome']} para {target_component['nome']}.")
 
@@ -604,7 +735,8 @@ class EditorCircuito(Widget):
             component_id, pin_name, direction = pin
             if self._pin_pendente is None:
                 self._pin_pendente = (component_id, pin_name)
-                self.status_texto = f"Pino {pin_name} selecionado. Clique no pino de destino."
+                self._mouse_pos = (touch.x, touch.y)
+                self.status_texto = f"Pino {pin_name} selecionado. Conecte o fio ao pino de destino."
             else:
                 self._conectar(self._pin_pendente, (component_id, pin_name))
             self._redesenhar()
@@ -615,6 +747,7 @@ class EditorCircuito(Widget):
             self.fio_selecionado = wire_index
             self.selecionado = None
             self._pin_pendente = None
+            self._mouse_pos = None
             wire = self.fios[wire_index]
             source = self._componente(wire["origem"][0])
             target = self._componente(wire["destino"][0])
@@ -650,12 +783,16 @@ class EditorCircuito(Widget):
                 return True
         if self._pin_pendente:
             self._pin_pendente = None
+            self._mouse_pos = None
             self.status_texto = "Seleção de pino cancelada."
         self.selecionado = None
         self._redesenhar()
         return True
 
     def on_touch_move(self, touch):
+        if self._pin_pendente is not None:
+            self._mouse_pos = (touch.x, touch.y)
+            self._desenhar_canvas()
         if touch.grab_current is self and self._arrastando:
             if not self._arrastando["ativo"]:
                 return True
@@ -726,65 +863,178 @@ class TelaPraticas(LayoutFundo):
         self.add_widget(Cabecalho(titulo="Conteúdo Prático"))
         self._shell = BoxLayout(orientation="vertical", padding=(dp(24), dp(14)), size_hint=(1, 1))
         with self._shell.canvas.before:
-            Color(.95, .97, 1, .98)
+            shell_fill = Color(*paleta_praticas()["shell"])
             self._shell_background = RoundedRectangle(pos=self._shell.pos, size=self._shell.size, radius=[dp(20)])
+        registrar_fundo(self._shell, shell_fill, "shell")
         self._shell.bind(pos=lambda item, value: setattr(self._shell_background, "pos", value),
                          size=lambda item, value: setattr(self._shell_background, "size", value))
         self.add_widget(self._shell)
         self.add_widget(Rodape(size_hint_y=None, height=dp(34)))
         self._back_bar = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(10))
-        self._back_bar.add_widget(self._button("Voltar ao painel", self.voltar, variant="secondary", height=dp(36)))
+        back_button = self._button("Voltar ao painel", self.voltar, variant="secondary", height=dp(36))
+        back_button.size_hint_x = None
+        back_button.width = dp(165)
+        back_button.icone = "arrow-left"
+        back_button.icon_position = "left"
+        self._back_bar.add_widget(back_button)
         self._back_bar.add_widget(Widget())
-        self._shell.add_widget(self._back_bar)
+        app = App.get_running_app()
+        if app is not None and hasattr(app, "settings"):
+            app.settings.bind(theme=self._aplicar_tema)
         self._mostrar_catalogo()
 
     def _button(self, text: str, action, *, variant="primary", height=dp(40), font_size="12sp"):
-        button = BotaoAcao(text=text, variant=variant, size_hint_y=None, height=height,
-                           color=(1, 1, 1, 1), bold=True, font_size=font_size,
-                           padding=(dp(10), dp(6)))
+        button = BotaoAcao(
+            text=text,
+            variant=variant,
+            size_hint_y=None,
+            height=height,
+            color=(1, 1, 1, 1),
+            bold=True,
+            font_size=font_size,
+            padding=(dp(10), dp(6)),
+            icon_position="right",
+        )
+        if text.lower().startswith(("abrir ", "voltar ", "voltar")):
+            button.icone = "arrow-right" if "abrir" in text.lower() else "arrow-left"
         button.bind(on_release=lambda *_args: action())
         return button
 
-    def _card(self, *, padding=dp(16), spacing=dp(8), color=(.065, .21, .47, 1)):
+    def _badge(self, texto: str, bg_color, text_color, icone: str | None = None, height=dp(24), fixed_width=None):
+        pill = BoxLayout(orientation="horizontal", size_hint=(None, None), height=height,
+                         spacing=dp(5), padding=(dp(8), dp(2)))
+        with pill.canvas.before:
+            fill = Color(*bg_color)
+            bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[height / 2])
+        pill.bind(pos=lambda item, value: setattr(bg, "pos", value),
+                  size=lambda item, value: setattr(bg, "size", value))
+        if icone:
+            pill.add_widget(IconeUI(nome=icone, size_hint=(None, None), size=(dp(14), height),
+                                    font_size=dp(13), color=text_color))
+        lbl = Label(text=texto, color=text_color, bold=True, font_size="10sp",
+                    size_hint=(None, None), height=height)
+
+        if fixed_width is not None:
+            pill.width = fixed_width
+            lbl.size_hint_x = 1
+            lbl.halign = "center"
+            lbl.valign = "middle"
+            lbl.bind(size=lambda item, val: setattr(item, "text_size", val))
+        else:
+            def _on_texture_size(instance, value):
+                lbl.width = value[0]
+                icon_w = dp(19) if icone else dp(0)
+                pill.width = value[0] + dp(18) + icon_w
+
+            lbl.bind(texture_size=_on_texture_size)
+            icon_w = dp(19) if icone else dp(0)
+            approx_w = max(dp(28), len(texto) * dp(7) + dp(18) + icon_w)
+            pill.width = approx_w
+            lbl.width = max(dp(10), len(texto) * dp(7))
+
+        pill.add_widget(lbl)
+        return pill
+
+    def _card(self, *, padding=dp(16), spacing=dp(8), elevated=False, color=None):
+        colors = paleta_praticas()
         card = BoxLayout(orientation="vertical", padding=padding, spacing=spacing, size_hint_y=None)
+        card_bg = color if color is not None else (colors["card_elevated"] if elevated else colors["card"])
         with card.canvas.before:
-            Color(*color)
+            fill = Color(*card_bg)
             background = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(14)])
-        card.bind(pos=lambda item, value: setattr(background, "pos", value),
-                  size=lambda item, value: setattr(background, "size", value))
+            border_col = Color(*colors["border"])
+            border = Line(rounded_rectangle=(card.x, card.y, card.width, card.height, dp(14)), width=dp(1))
+        registrar_fundo(card, fill, "card_elevated" if elevated else "card")
+        card.bind(pos=lambda item, value: (setattr(background, "pos", value),
+                                           setattr(border, "rounded_rectangle", (value[0], value[1], item.width, item.height, dp(14)))),
+                  size=lambda item, value: (setattr(background, "size", value),
+                                            setattr(border, "rounded_rectangle", (item.x, item.y, value[0], value[1], dp(14)))))
         card.bind(minimum_height=card.setter("height"))
         return card
 
-    @staticmethod
-    def _label(text, *, size="13sp", color=(.91, .95, 1, 1), bold=False, height=dp(28), valign="middle"):
+    def _label(self, text, *, size="13sp", color=None, bold=False, height=dp(28), valign="middle"):
+        if color is None:
+            color = paleta_praticas()["text"]
         label = Label(text=text, size_hint_y=None, height=height, color=color, bold=bold,
                       font_size=size, halign="left", valign=valign)
+        registrar_cor_texto(label, color)
         label.bind(width=lambda item, value: setattr(item, "text_size", (max(1, value), None)))
         return label
 
-    def _reset_shell(self):
+    def _linha_icone(self, imagem, simbolo, titulo, subtitulo=None, chave=None):
+        colors = paleta_praticas()
+        row = BoxLayout(size_hint_y=None, height=dp(52), spacing=dp(12))
+        icon = _icone_conteudo(imagem, simbolo, dp(40), chave)
+        row.add_widget(icon)
+        labels = BoxLayout(orientation="vertical", spacing=dp(1))
+        labels.add_widget(self._label(titulo, size="16sp", color=colors["text"], bold=True, height=dp(26)))
+        if subtitulo:
+            labels.add_widget(self._label(subtitulo, size="10sp", color=colors["muted"], height=dp(18)))
+        row.add_widget(labels)
+        return row
+
+    def _aplicar_tema(self, _settings=None, _theme=None):
+        self._shell_background.pos = self._shell.pos
+        self._shell_background.size = self._shell.size
+        self._shell._tema_fundo.rgba = (
+            paleta_praticas()["shell"] if tema_escuro() else self._shell._tema_fundo_original
+        )
+        aplicar_tema_arvore(self._shell)
+        if self.secao == "catalogo":
+            self._mostrar_catalogo()
+        elif self.secao == "materia" and self.materia_atual:
+            self._abrir_materia(self.materia_atual["id"])
+        elif self.atividade_atual and self.atividade_atual["id"] == ATIVIDADE_PORTAS_DISPLAY:
+            # Reconstrói os painéis laterais e mantém o mesmo circuito e as conexões.
+            self._mostrar_editor()
+        else:
+            aplicar_tema_arvore(self._shell)
+
+    def _reset_shell(self, mostrar_voltar_painel: bool = False):
         self._shell.clear_widgets()
-        self._shell.add_widget(self._back_bar)
+        if mostrar_voltar_painel:
+            self._shell.add_widget(self._back_bar)
 
     def _mostrar_catalogo(self):
         self.secao = "catalogo"
         self.titulo = "Conteúdo Prático"
-        self.status_texto = "Matérias e exercícios fixos do PM-Painel"
-        self._reset_shell()
-        self._shell.add_widget(self._label("Laboratórios práticos", size="24sp", color=(.08, .20, .37, 1), bold=True, height=dp(38)))
-        self._shell.add_widget(self._label(
-            "Este catálogo é mantido junto ao sistema. As turmas e equipes criadas por professores ficam na área teórica.",
-            size="13sp", color=(.31, .40, .54, 1), height=dp(32)))
+        self.status_texto = "Matérias e laboratórios interativos do PM-Painel"
+        self._reset_shell(mostrar_voltar_painel=True)
+        colors = paleta_praticas()
+
+        banner = BoxLayout(orientation="vertical", spacing=dp(4), size_hint_y=None, height=dp(68))
+        top_row = BoxLayout(size_hint_y=None, height=dp(36), spacing=dp(10))
+        top_row.add_widget(IconeUI(nome="flask-outline", size_hint=(None, None), size=(dp(30), dp(32)),
+                                   font_size=dp(24), color=colors["accent"]))
+        top_row.add_widget(self._label("Laboratórios Práticos do Sistema", size="21sp", color=colors["text"], bold=True, height=dp(34)))
+        top_row.add_widget(Widget())
+        top_row.add_widget(self._badge("CATÁLOGO FIXO", colors["tag_bg"], colors["accent"], "check-decagram"))
+        banner.add_widget(top_row)
+        banner.add_widget(self._label(
+            "Ambientes interativos e bancadas de simulação prática do PM-Painel (Lógica Digital, Redes I e Laboratório Docker).",
+            size="11sp", color=colors["muted"], height=dp(26)))
+        self._shell.add_widget(banner)
+
         scroll = ScrollView(do_scroll_x=False, bar_width=dp(6))
-        grid = GridLayout(cols=2, spacing=dp(14), padding=(dp(2), dp(12)), size_hint_y=None)
+        grid = GridLayout(cols=2, spacing=dp(14), padding=(dp(2), dp(10)), size_hint_y=None)
         grid.bind(minimum_height=grid.setter("height"))
         for materia in PRACTICAS_FIXAS:
-            card = self._card()
-            card.add_widget(self._label("MATÉRIA FIXA DO SISTEMA", size="10sp", color=(.57, .76, 1, 1), bold=True))
-            card.add_widget(self._label(materia["titulo"], size="20sp", bold=True, height=dp(34)))
-            card.add_widget(self._label(materia["descricao"], color=(.82, .88, .97, 1), height=dp(42), valign="top"))
-            card.add_widget(self._label(f"{len(materia['atividades'])} atividade prática disponível", size="11sp", color=(.68, .81, 1, 1)))
-            card.add_widget(self._button("Abrir matéria", partial(self._abrir_materia, materia["id"])))
+            card = self._card(padding=dp(16), spacing=dp(10), elevated=True)
+            card.add_widget(self._linha_icone(materia.get("imagem"), materia.get("icone", "book-open-page-variant"),
+                                              materia["titulo"], "MATÉRIA FIXA • LABORATÓRIO", materia["id"]))
+            card.add_widget(self._label(materia["descricao"], color=colors["text_secondary"], height=dp(44), valign="top"))
+
+            pills_row = BoxLayout(size_hint_y=None, height=dp(28), spacing=dp(8))
+            qtd_ativ = len(materia['atividades'])
+            pills_row.add_widget(self._badge(f"{qtd_ativ} {'Laboratório' if qtd_ativ == 1 else 'Laboratórios'}", colors["tag_bg"], colors["primary"], "flask-outline"))
+            pills_row.add_widget(self._badge("Simulação Interativa", colors["success_bg"], colors["success"], "play-circle-outline"))
+            pills_row.add_widget(Widget())
+            card.add_widget(pills_row)
+
+            btn = self._button("Abrir Matéria Prática", partial(self._abrir_materia, materia["id"]))
+            btn.icone = "arrow-right"
+            btn.icon_position = "right"
+            card.add_widget(btn)
             grid.add_widget(card)
         scroll.add_widget(grid)
         self._shell.add_widget(scroll)
@@ -798,19 +1048,47 @@ class TelaPraticas(LayoutFundo):
         self.titulo = self.materia_atual["titulo"]
         self.status_texto = "Matéria prática fixa do sistema"
         self._reset_shell()
-        toolbar = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(10))
-        toolbar.add_widget(self._button("Voltar às matérias práticas", self._mostrar_catalogo, variant="secondary"))
-        toolbar.add_widget(self._label(self.materia_atual["titulo"], size="22sp", color=(.08, .20, .37, 1), bold=True, height=dp(42)))
+        colors = paleta_praticas()
+
+        toolbar = BoxLayout(size_hint_y=None, height=dp(46), spacing=dp(10))
+        btn_voltar = self._button("Voltar às matérias", self._mostrar_catalogo, variant="secondary", height=dp(36))
+        btn_voltar.icone = "arrow-left"
+        btn_voltar.icon_position = "left"
+        toolbar.add_widget(btn_voltar)
+        toolbar.add_widget(IconeUI(nome=self.materia_atual.get("icone", "book-open"), size_hint=(None, None), size=(dp(30), dp(32)),
+                                   font_size=dp(24), color=colors["accent"]))
+        toolbar.add_widget(self._label(self.materia_atual["titulo"], size="20sp", color=colors["text"], bold=True, height=dp(40)))
+        toolbar.add_widget(Widget())
+        toolbar.add_widget(self._badge(f"{len(self.materia_atual['atividades'])} ATIVIDADES", colors["tag_bg"], colors["accent"]))
         self._shell.add_widget(toolbar)
-        self._shell.add_widget(self._label(self.materia_atual["descricao"], size="14sp", color=(.31, .40, .54, 1), height=dp(45)))
+
+        self._shell.add_widget(self._label(self.materia_atual["descricao"], size="12sp", color=colors["muted"], height=dp(34)))
+
+        scroll = ScrollView(do_scroll_x=False, bar_width=dp(6))
+        container_ativ = BoxLayout(orientation="vertical", spacing=dp(12), padding=(dp(2), dp(6)), size_hint_y=None)
+        container_ativ.bind(minimum_height=container_ativ.setter("height"))
+
         for activity in self.materia_atual["atividades"]:
-            card = self._card()
-            card.add_widget(self._label("LABORATÓRIO INTERATIVO", size="10sp", color=(.57, .76, 1, 1), bold=True))
-            card.add_widget(self._label(activity["titulo"], size="19sp", bold=True, height=dp(34)))
-            card.add_widget(self._label(activity["descricao"], color=(.82, .88, .97, 1), height=dp(42)))
-            card.add_widget(self._label(f"{activity['nivel']}  |  {activity['tempo']}  |  Simulação digital", size="11sp", color=(.68, .81, 1, 1)))
-            card.add_widget(self._button("Abrir laboratório", partial(self._abrir_atividade, activity["id"])))
-            self._shell.add_widget(card)
+            card = self._card(padding=dp(16), spacing=dp(10), elevated=True)
+            card.add_widget(self._linha_icone(activity.get("imagem"), activity.get("icone", "flask-outline"),
+                                              activity["titulo"], "LABORATÓRIO PRÁTICO INTERATIVO", activity["id"]))
+            card.add_widget(self._label(activity["descricao"], color=colors["text_secondary"], height=dp(42)))
+
+            pills = BoxLayout(size_hint_y=None, height=dp(28), spacing=dp(8))
+            pills.add_widget(self._badge(activity["nivel"].upper(), colors["tag_bg"], colors["primary"], "school-outline"))
+            pills.add_widget(self._badge(activity["tempo"], colors["tag_bg"], colors["muted"], "clock-outline"))
+            pills.add_widget(self._badge("Bancada Interativa", colors["success_bg"], colors["success"], "checkbox-marked-circle-outline"))
+            pills.add_widget(Widget())
+            card.add_widget(pills)
+
+            btn = self._button("Iniciar Laboratório Prático", partial(self._abrir_atividade, activity["id"]))
+            btn.icone = "play-circle"
+            btn.icon_position = "left"
+            card.add_widget(btn)
+            container_ativ.add_widget(card)
+
+        scroll.add_widget(container_ativ)
+        self._shell.add_widget(scroll)
 
     def _abrir_atividade(self, activity_id: str):
         if not self.materia_atual:
@@ -819,8 +1097,21 @@ class TelaPraticas(LayoutFundo):
         if not self.atividade_atual:
             return
         self.secao = "atividade"
-        self.titulo = "Laboratório - Lógica digital"
-        self._mostrar_editor()
+        if activity_id == ATIVIDADE_PORTAS_DISPLAY:
+            self.titulo = "Laboratório - Lógica digital"
+            self._mostrar_editor()
+            return
+
+        from model.praticas_redes import LaboratorioDocker, LaboratorioEnderecoIP
+
+        self._reset_shell()
+        voltar = partial(self._abrir_materia, self.materia_atual["id"])
+        if activity_id == ATIVIDADE_REDES_OSI_IP:
+            self.titulo = "Laboratório - Modelo OSI e Redes"
+            self._shell.add_widget(LaboratorioEnderecoIP(on_voltar=voltar))
+        elif activity_id == ATIVIDADE_REDES_TERMINAIS:
+            self.titulo = "Laboratório - Rede Docker"
+            self._shell.add_widget(LaboratorioDocker(on_voltar=voltar))
 
     def _mostrar_editor(self):
         self._reset_shell()
@@ -851,9 +1142,12 @@ class TelaPraticas(LayoutFundo):
         workspace.add_widget(palette_scroll)
 
         center = BoxLayout(orientation="vertical", spacing=dp(6))
-        self.editor = EditorCircuito()
-        self.editor.bind(status_texto=self._atualizar_status)
-        self.editor.bind(estado_circuito=self._atualizar_estado)
+        if self.editor is None:
+            self.editor = EditorCircuito()
+            self.editor.bind(status_texto=self._atualizar_status)
+            self.editor.bind(estado_circuito=self._atualizar_estado)
+        else:
+            self.editor._redesenhar()
         center.add_widget(self.editor)
         live_readout = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(50), spacing=dp(2))
         self._state_label = self._label(self.editor.estado_circuito, size="11sp", color=(.04, .40, .34, 1), bold=True, height=dp(24))
@@ -881,21 +1175,23 @@ class TelaPraticas(LayoutFundo):
         self._shell.add_widget(workspace)
 
     def _painel(self, parent, title: str, description: str):
-        card = self._card(padding=dp(10), spacing=dp(5), color=(.08, .25, .52, 1))
+        card = self._card(padding=dp(10), spacing=dp(5), elevated=True)
         card.add_widget(self._label(title, size="13sp", bold=True, height=dp(25)))
-        card.add_widget(self._label(description, size="10sp", color=(.82, .89, .98, 1), height=dp(54), valign="top"))
+        card.add_widget(self._label(description, size="10sp", color=paleta_praticas()["muted"], height=dp(54), valign="top"))
         parent.add_widget(card)
 
     def _indicador_ao_vivo(self):
         badge = BoxLayout(orientation="horizontal", size_hint=(None, None), size=(dp(154), dp(32)),
                           spacing=dp(7), padding=(dp(9), dp(3)))
         with badge.canvas.before:
-            Color(.84, .97, .91, 1)
+            fill = Color(*paleta_praticas()["success_bg"])
             background = RoundedRectangle(pos=badge.pos, size=badge.size, radius=[dp(15)])
+        registrar_fundo(badge, fill, "success_bg")
         badge.bind(pos=lambda item, value: setattr(background, "pos", value),
                    size=lambda item, value: setattr(background, "size", value))
         badge.add_widget(IndicadorSinal(size_hint=(None, None), size=(dp(9), dp(22))))
-        label = Label(text="SIMULAÇÃO AO VIVO", color=(.05, .40, .29, 1), bold=True, font_size="9sp")
+        label = Label(text="SIMULAÇÃO AO VIVO", color=paleta_praticas()["success"], bold=True, font_size="9sp")
+        registrar_cor_texto(label, (.05, .40, .29, 1), "success")
         badge.add_widget(label)
         return badge
 

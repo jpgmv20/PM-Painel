@@ -4,10 +4,9 @@ from pathlib import Path
 
 from kivy.factory import Factory
 from kivy.properties import BooleanProperty, StringProperty
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import SlideTransition
 
-from model.componentes import BotaoHover, LayoutFundo
+from model.componentes import CartaoInterativo, CartaoMaterial, LayoutFundo
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
@@ -19,16 +18,16 @@ def _icone_do_servico(filename: str) -> str:
     return relative_path if (PROJECT_DIR / relative_path).is_file() else ""
 
 
-class AtalhoNavegador(BotaoHover):
+class AtalhoNavegador(CartaoInterativo):
     """Botão visual para abrir um serviço pelo perfil temporário."""
 
     icone = StringProperty("")
-    simbolo = StringProperty("")
+    simbolo = StringProperty("apps")
     titulo = StringProperty("")
 
 
-class AreaNavegador(BoxLayout):
-    """Área que abre o WebView2 usando o perfil temporário do processo."""
+class AreaNavegador(CartaoMaterial):
+    """Área de aplicativos web abertos em janelas isoladas do navegador."""
 
     status_texto = StringProperty("Perfil temporário pronto para o navegador.")
     profile_path = StringProperty("")
@@ -48,24 +47,35 @@ class AreaNavegador(BoxLayout):
             return
         app = App.get_running_app()
         shortcuts = (
-            ("show_google", "Chrome", _icone_do_servico("google.png"), "", self.abrir_navegador),
-            ("show_youtube", "YouTube", _icone_do_servico("youtube.png"), "", partial(self.abrir_atalho, "https://www.youtube.com/")),
-            ("show_outlook", "Outlook", _icone_do_servico("outlook.png"), "", partial(self.abrir_atalho, "https://outlook.office.com/")),
-            ("show_teams", "Teams", _icone_do_servico("teams.png"), "", partial(self.abrir_atalho, "https://teams.microsoft.com/")),
-            ("show_word", "Word", _icone_do_servico("word.png"), "", partial(self.abrir_atalho, "https://www.office.com/launch/word")),
-            ("show_excel", "Excel", _icone_do_servico("excel.png"), "", partial(self.abrir_atalho, "https://www.office.com/launch/excel")),
-            ("show_onedrive", "OneDrive", _icone_do_servico("onedrive.png"), "", partial(self.abrir_atalho, "https://www.office.com/launch/onedrive")),
-            ("show_google_drive", "Google Drive", _icone_do_servico("google_drive.png"), "", partial(self.abrir_atalho, "https://drive.google.com/")),
-            ("show_classroom", "Classroom", _icone_do_servico("classroom.png"), "", partial(self.abrir_atalho, "https://classroom.google.com/")),
-            ("show_github", "GitHub", _icone_do_servico("github.png"), "", partial(self.abrir_atalho, "https://github.com/")),
-            ("show_discord", "Discord", _icone_do_servico("discord.png"), "", partial(self.abrir_atalho, "https://discord.com/app")),
-            ("show_git", "Git Bash", _icone_do_servico("git.png"), "", self.abrir_git_bash),
+            ("show_google", "Chrome", "google.png", "google-chrome", self.abrir_navegador),
+            ("show_youtube", "YouTube", "youtube.png", "youtube", partial(self.abrir_atalho, "https://www.youtube.com/")),
+            ("show_outlook", "Outlook", "outlook.png", "microsoft-outlook", partial(self.abrir_atalho, "https://outlook.office.com/")),
+            ("show_teams", "Teams", "teams.png", "microsoft-teams", partial(self.abrir_atalho, "https://teams.microsoft.com/")),
+            ("show_word", "Word", "word.png", "microsoft-word", partial(self.abrir_atalho, "https://www.office.com/launch/word")),
+            ("show_excel", "Excel", "excel.png", "microsoft-excel", partial(self.abrir_atalho, "https://www.office.com/launch/excel")),
+            ("show_onedrive", "OneDrive", "onedrive.png", "microsoft-onedrive", partial(self.abrir_atalho, "https://www.office.com/launch/onedrive")),
+            ("show_google_drive", "Google Drive", "google_drive.png", "google-drive", partial(self.abrir_atalho, "https://drive.google.com/")),
+            ("show_classroom", "Classroom", "classroom.png", "google-classroom", partial(self.abrir_atalho, "https://classroom.google.com/")),
+            ("show_github", "GitHub", "github.png", "github", partial(self.abrir_atalho, "https://github.com/")),
+            ("show_discord", "Discord", "discord.png", "message-text-outline", partial(self.abrir_atalho, "https://discord.com/app")),
+            ("show_git", "Git Bash", "git.png", "console-line", self.abrir_git_bash),
+            ("show_google_calendar", "Google Agenda", "google_calendar.png", "calendar-month-outline", partial(self.abrir_atalho, "https://calendar.google.com/")),
+            ("show_google_meet", "Google Meet", "google_meet.png", "video-outline", partial(self.abrir_atalho, "https://meet.google.com/")),
+            ("show_google_docs", "Google Docs", "google_docs.png", "file-document-outline", partial(self.abrir_atalho, "https://docs.google.com/document/")),
+            ("show_google_slides", "Google Slides", "google_slides.png", "presentation", partial(self.abrir_atalho, "https://slides.google.com/")),
+            ("show_google_forms", "Google Forms", "google_forms.png", "clipboard-list-outline", partial(self.abrir_atalho, "https://forms.google.com/")),
+            ("show_google_maps", "Google Maps", "google_maps.png", "map-marker-outline", partial(self.abrir_atalho, "https://maps.google.com/")),
+            ("show_google_keep", "Google Keep", "google_keep.png", "note-text-outline", partial(self.abrir_atalho, "https://keep.google.com/")),
+            ("show_canva", "Canva", "canva.png", "palette-outline", partial(self.abrir_atalho, "https://www.canva.com/")),
+            ("show_notion", "Notion", "notion.png", "notebook-outline", partial(self.abrir_atalho, "https://www.notion.so/")),
+            ("show_trello", "Trello", "trello.png", "view-column-outline", partial(self.abrir_atalho, "https://trello.com/")),
         )
         grid = self.ids.shortcuts_grid
         grid.clear_widgets()
-        for setting, title, icon, symbol, callback in shortcuts:
+        for setting, title, icon_filename, symbol, callback in shortcuts:
             if not getattr(app.settings, setting):
                 continue
+            icon = _icone_do_servico(icon_filename)
             button = Factory.AtalhoNavegador(titulo=title, icone=icon, simbolo=symbol)
             button.bind(on_release=lambda _button, action=callback: action())
             grid.add_widget(button)
@@ -128,7 +138,9 @@ class TelaPrincipal(LayoutFundo):
         for field in (
             "show_google", "show_youtube", "show_outlook", "show_git", "show_classroom",
             "show_teams", "show_word", "show_excel", "show_onedrive", "show_google_drive",
-            "show_discord", "show_github",
+            "show_discord", "show_github", "show_google_calendar", "show_google_meet",
+            "show_google_docs", "show_google_slides", "show_google_forms", "show_google_maps",
+            "show_google_keep", "show_canva", "show_notion", "show_trello",
         ):
             settings.bind(**{field: self.ids.browser_area.atualizar_atalhos})
 

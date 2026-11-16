@@ -13,6 +13,7 @@ Config.set("graphics", "resizable", "0")
 
 from kivy.app import App
 from kivy.core.window import Window
+from kivy.core.text import LabelBase
 from kivy.resources import resource_add_path
 from kivy.clock import Clock
 from kivy.metrics import dp
@@ -33,6 +34,7 @@ from model.praticas import TelaPraticas
 from model.extensoes import TelaExtensoes
 from model.perfil import TelaPerfil
 from model.usuarios import TelaUsuarios
+from model.docker_erro import TelaDockerErro
 from service.git_bash import GitBashManager
 from service.materias import MateriasService
 from service.permissoes import Papel, PermissionService
@@ -48,6 +50,7 @@ from service.updates import UpdateService
 from service.translations import translate
 from service.windows_startup import WindowsStartupService
 from service.windows_tray import WindowsTrayService
+from service.docker_service import DockerService
 
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -55,10 +58,42 @@ resource_add_path(PROJECT_DIR)
 if getattr(sys, "_MEIPASS", None):
     resource_add_path(str(Path(sys._MEIPASS)))
 
+FONT_DIR = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "fonts"
+LabelBase.register(
+    name="Nunito",
+    fn_regular=str(FONT_DIR / "Nunito-Regular.ttf"),
+    fn_bold=str(FONT_DIR / "Nunito-Bold.ttf"),
+    fn_italic=str(FONT_DIR / "Nunito-Regular.ttf"),
+    fn_bolditalic=str(FONT_DIR / "Nunito-Bold.ttf"),
+)
+LabelBase.register(
+    name="NunitoSemiBold",
+    fn_regular=str(FONT_DIR / "Nunito-SemiBold.ttf"),
+    fn_bold=str(FONT_DIR / "Nunito-Bold.ttf"),
+    fn_italic=str(FONT_DIR / "Nunito-SemiBold.ttf"),
+    fn_bolditalic=str(FONT_DIR / "Nunito-Bold.ttf"),
+)
+LabelBase.register(
+    name="Roboto",
+    fn_regular=str(FONT_DIR / "Nunito-Regular.ttf"),
+    fn_bold=str(FONT_DIR / "Nunito-Bold.ttf"),
+    fn_italic=str(FONT_DIR / "Nunito-Regular.ttf"),
+    fn_bolditalic=str(FONT_DIR / "Nunito-Bold.ttf"),
+)
+LabelBase.register(
+    name="RobotoMedium",
+    fn_regular=str(FONT_DIR / "Nunito-SemiBold.ttf"),
+    fn_bold=str(FONT_DIR / "Nunito-Bold.ttf"),
+)
+LabelBase.register(
+    name="RobotoLight",
+    fn_regular=str(FONT_DIR / "Nunito-Regular.ttf"),
+)
+
 # Carrega primeiro os widgets reutilizáveis e depois as telas que os utilizam.
 for view_name in (
     "componentes.kv", "main.kv", "login.kv", "home.kv", "configuracoes.kv",
-    "materias.kv", "usuarios.kv", "extensoes.kv", "perfil.kv",
+    "materias.kv", "usuarios.kv", "extensoes.kv", "perfil.kv", "docker_erro.kv",
 ):
     Builder.load_file(os.path.join(PROJECT_DIR, "view", view_name))
 
@@ -82,6 +117,8 @@ class MeuApp(MDApp):
     settings_feedback = StringProperty("")
     update_status = StringProperty("")
     latest_update_url = StringProperty("")
+    font_family = StringProperty("Nunito")
+    font_family_medium = StringProperty("NunitoSemiBold")
     is_moderator = BooleanProperty(False)
     theme_surface = ListProperty([.95, .97, 1, 1])
     theme_text = ListProperty([.06, .10, .18, 1])
@@ -89,6 +126,18 @@ class MeuApp(MDApp):
 
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
+        self.theme_cls.primary_palette = "Blue"
+        self.theme_cls.primary_hue = "900"
+        self.theme_cls.accent_palette = "LightBlue"
+        self.theme_cls.font_styles = {
+            style: [
+                "NunitoSemiBold" if values[0] == "RobotoMedium" else (
+                    "Nunito" if values[0] in {"Roboto", "RobotoLight"} else values[0]
+                ),
+                *values[1:],
+            ]
+            for style, values in self.theme_cls.font_styles.items()
+        }
         local_app_data = os.environ.get("LOCALAPPDATA")
         self.data_dir = (
             Path(local_app_data) / "PM-Painel" if local_app_data else Path(self.user_data_dir)
@@ -110,6 +159,7 @@ class MeuApp(MDApp):
         self.git_bash_manager = GitBashManager(
             cleanup_abandoned_profiles=self.settings.clear_abandoned_sessions,
         )
+        self.docker_service = DockerService()
         self.session_manager = SessionManager(path=self.data_dir / "offline_session.json")
         self.update_service = UpdateService(self.data_dir, PROJECT_DIR)
         self.startup_service = WindowsStartupService()
@@ -306,8 +356,13 @@ class MeuApp(MDApp):
             title_color=tuple(self.theme_text), separator_color=(.11, .42, .82, 1),
             background_color=tuple(self.theme_surface),
         )
-        cancel = componentes.BotaoAcao(text=translate("Continuar usando", self.settings.language), variant="secondary")
         exit_button = componentes.BotaoAcao(text=translate("Sair", self.settings.language), variant="danger")
+        cancel = componentes.BotaoAcao(
+            text=translate("Continuar usando", self.settings.language),
+            variant="secondary",
+            icon_position="right",
+            icone="arrow-right",
+        )
 
         def close_dialog(*_args: object) -> None:
             dialog.dismiss()
@@ -315,8 +370,8 @@ class MeuApp(MDApp):
 
         cancel.bind(on_release=close_dialog)
         exit_button.bind(on_release=lambda *_: (close_dialog(), self.stop()))
-        actions.add_widget(cancel)
         actions.add_widget(exit_button)
+        actions.add_widget(cancel)
         content.add_widget(actions)
         self._exit_dialog = dialog
         dialog.bind(on_dismiss=lambda *_: setattr(self, "_exit_dialog", None))
@@ -479,19 +534,38 @@ class MeuApp(MDApp):
             ("usuarios", TelaUsuarios()),
             ("extensoes", TelaExtensoes()),
             ("perfil", TelaPerfil()),
+            ("docker_erro", TelaDockerErro()),
         ):
             screen = Screen(name=name)
             screen.add_widget(widget)
             manager.add_widget(screen)
+
         if self.session_manager.is_authenticated:
-            manager.current = "principal"
-            Clock.schedule_once(lambda _dt: self.iniciar_limite_sessao(), 0)
+            destino_inicial = "principal"
         elif self.settings.start_after_login:
-            manager.current = "login"
-        elif offline_start and not restored_offline:
+            destino_inicial = "login"
+        else:
+            destino_inicial = "home"
+
+        if offline_start and not restored_offline:
             login = manager.get_screen("login").children[0]
             login.status_texto = "Sem conexão: o passe offline expirou. Conecte-se para entrar novamente."
             login.status_cor = [.9, .48, .12, 1]
+
+        if self.settings.check_docker_on_startup:
+            docker_ok, docker_msg = self.docker_service.is_running(timeout=2.0)
+            if not docker_ok:
+                tela_docker = manager.get_screen("docker_erro").children[0]
+                tela_docker.configurar(
+                    destino_pos_sucesso=destino_inicial,
+                    detalhe=docker_msg,
+                )
+                manager.current = "docker_erro"
+                return manager
+
+        manager.current = destino_inicial
+        if destino_inicial == "principal":
+            Clock.schedule_once(lambda _dt: self.iniciar_limite_sessao(), 0)
         return manager
 
     def set_profile_photo(self, path: str | None = None) -> None:

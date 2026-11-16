@@ -21,7 +21,7 @@
             halign: 'center'
             valign: 'middle'
             bold: True
-            color: 0.9, 0.9, 0.9, 1
+            color: app.theme_text
             size_hint_y: None
             height: self.texture_size[1]
             text_size: self.width, None
@@ -30,6 +30,8 @@
         # 3. O Botão (fica exatamente no meio / abaixo do Label)
         BotaoPrincipal:
             text: "PROSSEGUIR"
+            icone: 'arrow-right'
+            icon_position: "right"
             pos_hint: {'center_x': 0.5, 'center_y': 0.42}
 
             on_release: root.abrir_menu_principal(self)

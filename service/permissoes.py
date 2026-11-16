@@ -14,10 +14,11 @@ class Papel(str, Enum):
 class PermissionService:
     """Resolve permissões locais; no futuro o backend deve fornecer o papel."""
 
-    EMAIL_MODERADOR_TESTE = "duolinfo.cefet@gmail.com"
+    EMAIL_MODERADOR_TESTE = "jpgamesv40@gmail.com"
+    EMAILS_MODERADORES = {"jpgamesv40@gmail.com", "duolinfo.cefet@gmail.com"}
 
     def papel_do_email(self, email: str | None) -> Papel:
-        if (email or "").strip().lower() == self.EMAIL_MODERADOR_TESTE:
+        if (email or "").strip().lower() in self.EMAILS_MODERADORES or (email or "").strip().lower() == self.EMAIL_MODERADOR_TESTE:
             return Papel.MODERADOR
         return Papel.ALUNO
 

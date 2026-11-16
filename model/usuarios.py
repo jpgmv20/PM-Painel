@@ -14,7 +14,8 @@ from kivy.uix.spinner import Spinner
 from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import SlideTransition
 
-from model.componentes import BotaoAcao, CampoTexto, LayoutFundo
+from kivy.uix.widget import Widget
+from model.componentes import BotaoAcao, CampoTexto, LayoutFundo, IconeUI
 
 
 class TelaUsuarios(LayoutFundo):
@@ -41,7 +42,7 @@ class TelaUsuarios(LayoutFundo):
         area.clear_widgets()
         if not self._moderador():
             self.ids.user_status.text = "Apenas moderadores podem abrir este painel."
-            area.add_widget(self._label("Seu perfil não tem permissão para gerenciar usuários."))
+            area.add_widget(self._card_vazio("Permissão restrita", "Seu perfil atual não tem permissão de moderador para gerenciar contas.", "shield-alert-outline"))
             return
 
         users = self._app.authentication_service.list_users()
@@ -50,41 +51,229 @@ class TelaUsuarios(LayoutFundo):
             + ("internet disponível" if self._online() else "sem conexão: gestão bloqueada")
         )
         if not users:
-            area.add_widget(self._label("Nenhuma conta local foi cadastrada ainda."))
+            area.add_widget(self._card_vazio("Nenhuma conta cadastrada", "Nenhuma conta local foi cadastrada ainda neste computador.", "account-question-outline"))
             return
         subject_names = {item.id: item.nome for item in self._app.materias_service.listar()}
         for user in users:
-            card = BoxLayout(
-                orientation="vertical", size_hint_y=None, height=dp(130),
-                padding=dp(12), spacing=dp(5),
+            area.add_widget(self._criar_cartao_usuario(user, subject_names))
+
+    def _badge_tag(self, text: str, role: str) -> BoxLayout:
+        from kivy.graphics import Color, RoundedRectangle
+        if role == "moderador":
+            bg_col = (0.75, 0.50, 0.10, 0.28)
+            txt_col = (1, 0.85, 0.45, 1)
+        elif role == "professor":
+            bg_col = (0.45, 0.22, 0.75, 0.28)
+            txt_col = (0.85, 0.65, 1, 1)
+        else:
+            bg_col = (0.15, 0.35, 0.70, 0.28)
+            txt_col = (0.55, 0.82, 1, 1)
+
+        pill = BoxLayout(size_hint=(None, None), height=dp(22), padding=(dp(8), dp(2)))
+        with pill.canvas.before:
+            Color(*bg_col)
+            bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[dp(11)])
+        pill.bind(pos=lambda item, value, s=bg: setattr(s, "pos", value),
+                  size=lambda item, value, s=bg: setattr(s, "size", value))
+        lbl = Label(text=text, font_size="10sp", bold=True, color=txt_col, size_hint=(None, None), height=dp(18))
+        lbl.bind(texture_size=lambda item, sz: (setattr(item, "width", sz[0]), setattr(pill, "width", sz[0] + dp(16))))
+        pill.add_widget(lbl)
+        return pill
+
+    def _badge_status(self, text: str, active: bool) -> BoxLayout:
+        from kivy.graphics import Color, RoundedRectangle
+        bg_col = (0.12, 0.65, 0.35, 0.28) if active else (0.65, 0.18, 0.18, 0.28)
+        txt_col = (0.45, 0.95, 0.65, 1) if active else (1, 0.45, 0.45, 1)
+
+        pill = BoxLayout(size_hint=(None, None), height=dp(22), padding=(dp(8), dp(2)))
+        with pill.canvas.before:
+            Color(*bg_col)
+            bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[dp(11)])
+        pill.bind(pos=lambda item, value, s=bg: setattr(s, "pos", value),
+                  size=lambda item, value, s=bg: setattr(s, "size", value))
+        lbl = Label(text=text, font_size="10sp", bold=True, color=txt_col, size_hint=(None, None), height=dp(18))
+        lbl.bind(texture_size=lambda item, sz: (setattr(item, "width", sz[0]), setattr(pill, "width", sz[0] + dp(16))))
+        pill.add_widget(lbl)
+        return pill
+
+    def _criar_cartao_usuario(self, user: dict, subject_names: dict) -> BoxLayout:
+        from kivy.graphics import Color, RoundedRectangle, Line
+        role_raw = str(user.get("role", "aluno")).lower()
+        role_display = role_raw.capitalize()
+        active = user.get("active", True)
+        status_display = "Ativa" if active else "Suspensa"
+        current_user = self._app.session_manager.user or {}
+        is_self = str(user.get("id")) == str(current_user.get("id"))
+        assigned = user.get("materias_responsaveis", [])
+        names = [subject_names[item] for item in assigned if item in subject_names]
+        is_prof = role_raw == "professor"
+        has_mat = is_prof and bool(names)
+
+        card_h = dp(96) if has_mat else dp(82)
+        card = BoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=card_h,
+            padding=(dp(16), dp(10)),
+            spacing=dp(14),
+        )
+        with card.canvas.before:
+            Color(0.06, 0.10, 0.18, 0.88)
+            background = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12)])
+            Color(0.18, 0.32, 0.52, 0.45)
+            border = Line(rounded_rectangle=(card.x, card.y, card.width, card.height, dp(12)), width=dp(1))
+
+        card.bind(
+            pos=lambda item, value, s=background, b=border: (
+                setattr(s, "pos", value),
+                setattr(b, "rounded_rectangle", (value[0], value[1], item.width, item.height, dp(12)))
+            ),
+            size=lambda item, value, s=background, b=border: (
+                setattr(s, "size", value),
+                setattr(b, "rounded_rectangle", (item.x, item.y, value[0], value[1], dp(12)))
+            ),
+        )
+
+        # Avatar com ícone
+        avatar = BoxLayout(size_hint=(None, None), size=(dp(44), dp(44)), pos_hint={"center_y": 0.5})
+        with avatar.canvas.before:
+            Color(0.12, 0.22, 0.38, 1)
+            av_bg = RoundedRectangle(pos=avatar.pos, size=avatar.size, radius=[dp(22)])
+            Color(0.28, 0.50, 0.82, 0.7)
+            av_border = Line(rounded_rectangle=(avatar.x, avatar.y, avatar.width, avatar.height, dp(22)), width=dp(1.2))
+        avatar.bind(
+            pos=lambda item, value, s=av_bg, b=av_border: (
+                setattr(s, "pos", value),
+                setattr(b, "rounded_rectangle", (value[0], value[1], item.width, item.height, dp(22)))
+            ),
+            size=lambda item, value, s=av_bg, b=av_border: (
+                setattr(s, "size", value),
+                setattr(b, "rounded_rectangle", (item.x, item.y, value[0], value[1], dp(22)))
+            ),
+        )
+        icone_nome = "shield-crown" if role_raw == "moderador" else ("school" if role_raw == "professor" else "account")
+        icone_cor = (1, 0.82, 0.35, 1) if role_raw == "moderador" else ((0.5, 0.85, 1, 1) if role_raw == "professor" else (0.75, 0.85, 1, 1))
+        avatar.add_widget(IconeUI(nome=icone_nome, size_hint=(1, 1), font_size="22sp", color=icone_cor, halign="center", valign="middle"))
+        card.add_widget(avatar)
+
+        # Coluna Central: Nome, Badges, Email, Matérias
+        info_col = BoxLayout(orientation="vertical", spacing=dp(3), size_hint_x=1)
+        top_row = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(26))
+        lbl_nome = Label(
+            text=user.get("name", "Usuário"),
+            bold=True,
+            font_size="15sp",
+            color=(0.92, 0.96, 1, 1),
+            size_hint=(None, None),
+            height=dp(24),
+            halign="left",
+            valign="middle"
+        )
+        lbl_nome.bind(texture_size=lambda item, size: setattr(item, "width", size[0]))
+        top_row.add_widget(lbl_nome)
+        top_row.add_widget(self._badge_tag(role_display, role_raw))
+        top_row.add_widget(self._badge_status(status_display, active))
+        top_row.add_widget(Widget())
+        info_col.add_widget(top_row)
+
+        lbl_email = Label(
+            text=user.get("email", ""),
+            font_size="12sp",
+            color=(0.60, 0.70, 0.85, 1),
+            size_hint_y=None,
+            height=dp(18),
+            halign="left",
+            valign="middle"
+        )
+        lbl_email.bind(size=lambda item, val: setattr(item, "text_size", val))
+        info_col.add_widget(lbl_email)
+
+        if has_mat:
+            lbl_mat = Label(
+                text="Matérias: " + ", ".join(names),
+                font_size="11sp",
+                color=(0.42, 0.78, 0.95, 0.9),
+                size_hint_y=None,
+                height=dp(18),
+                halign="left",
+                valign="middle"
             )
-            with card.canvas.before:
-                from kivy.graphics import Color, RoundedRectangle
-                Color(.055, .09, .15, 1)
-                background = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12)])
-            card.bind(
-                pos=lambda item, value, shape=background: setattr(shape, "pos", value),
-                size=lambda item, value, shape=background: setattr(shape, "size", value),
+            lbl_mat.bind(size=lambda item, val: setattr(item, "text_size", val))
+            info_col.add_widget(lbl_mat)
+
+        card.add_widget(info_col)
+
+        # Ações à direita (compactas, nunca esticam!)
+        actions = BoxLayout(
+            orientation="horizontal",
+            size_hint=(None, None),
+            height=dp(38),
+            spacing=dp(8),
+            pos_hint={"center_y": 0.5}
+        )
+        total_btn_w = dp(0)
+
+        if is_prof:
+            btn_mat = BotaoAcao(
+                text="Atribuir matérias",
+                icone="book-edit-outline",
+                variant="secondary",
+                size_hint=(None, None),
+                size=(dp(160), dp(36)),
+                font_size="11sp"
             )
-            role = str(user.get("role", "aluno")).capitalize()
-            status = "Ativa" if user.get("active", True) else "Suspensa"
-            card.add_widget(self._label(f"{user.get('name', 'Usuário')}  •  {role}  •  {status}", bold=True))
-            card.add_widget(self._label(user.get("email", "")))
-            assigned = user.get("materias_responsaveis", [])
-            names = [subject_names[item] for item in assigned if item in subject_names]
-            if role.casefold() == "professor":
-                card.add_widget(self._label("Matérias: " + (", ".join(names) if names else "nenhuma atribuída")))
-            actions = BoxLayout(size_hint_y=None, height=dp(30), spacing=dp(8))
-            if user.get("role") == "professor":
-                actions.add_widget(self._button("Atribuir matérias", lambda item=user: self._abrir_formulario(item)))
-            if user.get("id") != self._app.session_manager.user.get("id"):
-                active = user.get("active", True)
-                actions.add_widget(self._button(
-                    "Suspender conta" if active else "Reativar conta",
-                    lambda ident=user["id"], value=not active: self._alterar_ativacao(ident, value),
-                ))
-            card.add_widget(actions)
-            area.add_widget(card)
+            btn_mat.bind(on_release=lambda _b, item=user: self._abrir_formulario(item))
+            actions.add_widget(btn_mat)
+            total_btn_w += dp(168)
+
+        if not is_self:
+            btn_toggle = BotaoAcao(
+                text="Suspender conta" if active else "Reativar conta",
+                icone="account-cancel-outline" if active else "account-check-outline",
+                variant="danger" if active else "primary",
+                size_hint=(None, None),
+                size=(dp(150), dp(36)),
+                font_size="11sp"
+            )
+            btn_toggle.bind(on_release=lambda _b, ident=user["id"], val=not active: self._alterar_ativacao(ident, val))
+            actions.add_widget(btn_toggle)
+            total_btn_w += dp(150)
+        else:
+            lbl_self = Label(
+                text="Você (Sessão atual)",
+                color=(0.45, 0.75, 1, 0.8),
+                font_size="11sp",
+                bold=True,
+                size_hint=(None, None),
+                size=(dp(140), dp(36)),
+                halign="center",
+                valign="middle"
+            )
+            actions.add_widget(lbl_self)
+            total_btn_w += dp(140)
+
+        actions.width = total_btn_w
+        card.add_widget(actions)
+        return card
+
+    def _card_vazio(self, titulo: str, subtitulo: str, icone: str) -> BoxLayout:
+        from kivy.graphics import Color, RoundedRectangle, Line
+        box = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(110), padding=dp(16), spacing=dp(6))
+        with box.canvas.before:
+            Color(0.06, 0.10, 0.18, 0.7)
+            bg = RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(12)])
+            Color(0.18, 0.32, 0.52, 0.3)
+            b = Line(rounded_rectangle=(box.x, box.y, box.width, box.height, dp(12)), width=dp(1))
+        box.bind(pos=lambda item, val, s=bg, ln=b: (setattr(s, "pos", val), setattr(ln, "rounded_rectangle", (val[0], val[1], item.width, item.height, dp(12)))),
+                 size=lambda item, val, s=bg, ln=b: (setattr(s, "size", val), setattr(ln, "rounded_rectangle", (item.x, item.y, val[0], val[1], dp(12)))))
+        topo = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(28), spacing=dp(8))
+        topo.add_widget(IconeUI(nome=icone, size_hint=(None, None), size=(dp(24), dp(24)), font_size="20sp", color=(0.4, 0.7, 1, 0.9)))
+        topo.add_widget(Label(text=titulo, bold=True, font_size="14sp", color=(0.88, 0.93, 1, 1), halign="left", valign="middle", size_hint_x=1))
+        box.add_widget(topo)
+        lbl_sub = Label(text=subtitulo, font_size="11sp", color=(0.6, 0.7, 0.85, 0.8), halign="left", valign="middle", size_hint_y=None, height=dp(24))
+        lbl_sub.bind(size=lambda item, val: setattr(item, "text_size", val))
+        box.add_widget(lbl_sub)
+        return box
 
     def novo_usuario(self):
         if not self._validar_moderador():
@@ -220,10 +409,10 @@ class TelaUsuarios(LayoutFundo):
         label.bind(width=lambda item, width: setattr(item, "text_size", (width, None)))
         return label
 
-    def _button(self, title: str, action) -> BotaoAcao:
+    def _button(self, title: str, action, variant="primary", width=dp(150)) -> BotaoAcao:
         button = BotaoAcao(
-            text=title, variant="primary", size_hint_y=None, height=dp(42),
-            color=(1, 1, 1, 1),
+            text=title, variant=variant, size_hint=(None, None), size=(width, dp(36)),
+            color=(1, 1, 1, 1), font_size="11sp"
         )
         button.bind(on_release=lambda _button: action())
         return button

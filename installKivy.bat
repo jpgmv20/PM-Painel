@@ -46,6 +46,10 @@ echo --- Instalando Kivy e exemplos ---
 python -m pip install "kivy[full, tuio]" kivy_examples
 
 echo.
+echo --- Instalando a ponte dos terminais Docker em tempo real ---
+python -m pip install "docker>=7.2,<8" "websockets>=13,<18"
+
+echo.
 echo Instalacao de Kivy concluida.
 echo Agora voce pode testar o import do Kivy.
 

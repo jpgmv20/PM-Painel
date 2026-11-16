@@ -6,13 +6,11 @@ from kivy.graphics.texture import Texture
 from kivy.properties import ObjectProperty
 from kivy.factory import Factory
 from kivy.properties import BooleanProperty
-from kivy.properties import NumericProperty
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.graphics import Color, Line, RoundedRectangle
 from kivy.metrics import dp
 from kivy.core.window import Window
-from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.dropdown import DropDown
 from kivy.core.image import Image as CoreImage
 from kivy.animation import Animation
@@ -22,6 +20,8 @@ from kivy.app import App
 import os
 from kivymd.icon_definitions import md_icons
 from kivymd.uix.label import MDIcon
+from kivymd.uix.card import MDCard
+from kivymd.uix.textfield import MDTextField
 
 from service.login.authentication import AuthenticationService as auth
 
@@ -49,9 +49,9 @@ class LayoutFundo(BoxLayout):
     def criar_gradiente_fundo(self, theme="Claro"):
         texture = Texture.create(size=(1, 2), colorfmt='rgba')
         if str(theme).casefold() in {"escuro", "dark"}:
-            pixels = bytes([7, 20, 43, 255, 28, 57, 96, 255])
+            pixels = bytes([12, 18, 29, 255, 22, 33, 49, 255])
         else:
-            pixels = bytes([13, 74, 161, 255, 100, 180, 240, 255])
+            pixels = bytes([244, 247, 251, 255, 232, 238, 246, 255])
         texture.blit_buffer(pixels, colorfmt='rgba', bufferfmt='ubyte')
         return texture
 
@@ -81,6 +81,7 @@ class Cabecalho(BoxLayout):
     """Cabeçalho moderno estilizado totalmente via código Kivy."""
     titulo = StringProperty("PM - Painel")
     gradiente_textura = ObjectProperty(None)
+    gradiente_login = BooleanProperty(False)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -88,6 +89,7 @@ class Cabecalho(BoxLayout):
         app = App.get_running_app()
         if app is not None and hasattr(app, "settings"):
             app.settings.bind(theme=self._atualizar_tema)
+        self.bind(gradiente_login=self._atualizar_tema)
         
         # Instancia o menu suspenso
         self.menu_perfil = MenuPerfil()
@@ -164,10 +166,14 @@ class Cabecalho(BoxLayout):
         texture = Texture.create(size=(1, 2), colorfmt='rgba')
         app = App.get_running_app()
         theme = app.settings.theme if app is not None and hasattr(app, "settings") else "Claro"
-        if str(theme).casefold() in {"escuro", "dark"}:
+        if self.gradiente_login and str(theme).casefold() in {"escuro", "dark"}:
             pixels = bytes([6, 16, 35, 255, 21, 45, 80, 255])
-        else:
+        elif self.gradiente_login:
             pixels = bytes([100, 180, 240, 255, 13, 74, 161, 255])
+        elif str(theme).casefold() in {"escuro", "dark"}:
+            pixels = bytes([0, 58, 121, 255, 0, 70, 150, 255])
+        else:
+            pixels = bytes([0, 58, 121, 255, 0, 70, 150, 255])
         texture.blit_buffer(pixels, colorfmt='rgba', bufferfmt='ubyte')
         return texture
 
@@ -233,36 +239,27 @@ class Rodape(BoxLayout):
 
 
 
-class CardMenu(ButtonBehavior, BoxLayout):
-    """Cartão de menu com aparência e animação de hover reutilizáveis."""
+class CartaoMaterial(MDCard):
+    """Cartão reutilizável com elevação e cantos consistentes do KivyMD."""
 
-    titulo = StringProperty("Título do Card")
-    descricao = StringProperty("Descrição do card, explicando sua função.")
-    imagem_source = StringProperty("assets/img/config.jpg")
+
+class CartaoInterativo(CartaoMaterial):
+    """Cartão Material com clique, efeito ripple e elevação ao passar o mouse."""
+
     hovering = BooleanProperty(False)
 
-    # Estas propriedades são consumidas pela regra <CardMenu> em componentes.kv.
-    # Manter a aparência no KV deixa este widget responsável apenas pelo comportamento.
-    cor_fundo = ListProperty([0.06, 0.21, 0.48, 0.98])
-    cor_fundo_normal = ListProperty([0.06, 0.21, 0.48, 0.98])
-    cor_fundo_hover = ListProperty([0.08, 0.28, 0.60, 1])
-    deslocamento_sombra = ListProperty([6, -6])
-    deslocamento_sombra_normal = ListProperty([6, -6])
-    deslocamento_sombra_hover = ListProperty([14, -16])
-    opacidade_sombra = NumericProperty(0.22)
-    opacidade_sombra_normal = NumericProperty(0.22)
-    opacidade_sombra_hover = NumericProperty(0.38)
-    elevacao = NumericProperty(0)
-    elevacao_hover = NumericProperty(10)
-
     def __init__(self, **kwargs):
+        kwargs.setdefault("ripple_behavior", True)
+        kwargs.setdefault("focus_behavior", True)
+        kwargs.setdefault("style", "elevated")
+        kwargs.setdefault("elevation", 3)
+        kwargs.setdefault("radius", [dp(22)] * 4)
         super().__init__(**kwargs)
-        self._animacao = None
+        self._hover_animation = None
         self._monitorando_mouse = False
-        self.bind(hovering=self._on_hovering)
+        self.bind(hovering=self._atualizar_elevacao)
 
     def on_parent(self, _widget, parent):
-        """Monitora o mouse apenas enquanto o cartão estiver na interface."""
         if parent is not None and not self._monitorando_mouse:
             Window.bind(mouse_pos=self._on_mouse_pos)
             self._monitorando_mouse = True
@@ -271,40 +268,30 @@ class CardMenu(ButtonBehavior, BoxLayout):
             self._monitorando_mouse = False
             self.hovering = False
 
-    def _on_hovering(self, *args):
-        if self._animacao:
-            self._animacao.cancel(self)
-
-        cor_alvo = self.cor_fundo_hover if self.hovering else self.cor_fundo_normal
-        sombra_alvo = (
-            self.deslocamento_sombra_hover
-            if self.hovering
-            else self.deslocamento_sombra_normal
-        )
-        opacidade_alvo = (
-            self.opacidade_sombra_hover
-            if self.hovering
-            else self.opacidade_sombra_normal
-        )
-        self._animacao = Animation(
-            cor_fundo=cor_alvo,
-            deslocamento_sombra=sombra_alvo,
-            opacidade_sombra=opacidade_alvo,
-            elevacao=self.elevacao_hover if self.hovering else 0,
-            d=0.14,
-            t='out_quad',
-        )
-        self._animacao.start(self)
-
     def _on_mouse_pos(self, _window, pos):
         if not self.get_root_window():
             return
-
-        local_pos = self.to_widget(*pos)
-        inside = self.collide_point(*local_pos)
-
+        inside = self.collide_point(*self.to_widget(*pos))
         if self.hovering != inside:
             self.hovering = inside
+
+    def _atualizar_elevacao(self, *_args):
+        if self._hover_animation is not None:
+            self._hover_animation.cancel(self)
+        self._hover_animation = Animation(
+            elevation=6 if self.hovering else 3,
+            d=0.14,
+            t="out_quad",
+        )
+        self._hover_animation.start(self)
+
+
+class CardMenu(CartaoInterativo):
+    """Cartão de menu com ícone Material, descrição e estados interativos."""
+
+    titulo = StringProperty("Título do Card")
+    descricao = StringProperty("Descrição do card, explicando sua função.")
+    icone = StringProperty("view-dashboard-outline")
 
 
 
@@ -345,9 +332,39 @@ class BotaoHover(Button):
 class BotaoAcao(BotaoHover):
     """Botão da interface com cápsula, contorno e estados de foco consistentes."""
 
+    icone = StringProperty("")
+    icon_position = OptionProperty("left", options=("left", "right"))
     variant = OptionProperty(
         "primary", options=("primary", "secondary", "light", "danger", "quiet")
     )
+
+    def on_text(self, _instance, value):
+        if not self.icone:
+            self.icone = self._icone_para_acao(value)
+
+    @staticmethod
+    def _icone_para_acao(text):
+        text = str(text).casefold()
+        for terms, icon in (
+            (("voltar",), "arrow-left"),
+            (("painel", "início", "inicio", "home"), "home-outline"),
+            (("criar", "novo", "adicionar"), "plus-circle-outline"),
+            (("salvar", "guardar"), "content-save-outline"),
+            (("enviar", "publicar", "upload"), "upload-outline"),
+            (("instalar", "baixar", "download"), "download-outline"),
+            (("atualiza", "verificar", "reiniciar"), "refresh"),
+            (("editar",), "pencil-outline"),
+            (("excluir", "remover", "apagar", "deletar"), "delete-outline"),
+            (("buscar", "pesquisar", "filtrar"), "magnify"),
+            (("entrar", "login"), "login"),
+            (("sair", "logout", "fechar", "encerrar"), "exit-to-app"),
+            (("executar", "simular", "iniciar"), "play-outline"),
+            (("continuar", "abrir", "acessar"), "arrow-right"),
+            (("confirmar", "aprovar"), "check-circle-outline"),
+        ):
+            if any(term in text for term in terms):
+                return icon
+        return ""
 
 
 class IconeUI(MDIcon):
@@ -358,6 +375,7 @@ class IconeUI(MDIcon):
     def __init__(self, **kwargs):
         requested = kwargs.pop("nome", "help-circle-outline")
         kwargs["icon"] = "help-circle-outline"
+        kwargs.setdefault("font_name", "Icons")
         kwargs.setdefault("theme_text_color", "Custom")
         super().__init__(**kwargs)
         self.bind(nome=self._atualizar_icone)
@@ -368,8 +386,8 @@ class IconeUI(MDIcon):
         self.icon = nome if nome in md_icons else "help-circle-outline"
 
 
-class CampoTexto(TextInput):
-    """Campo de texto reutilizável com superfície arredondada e foco evidente."""
+class CampoTextoClassico(TextInput):
+    """Campo de texto original, mantido no login para preservar o visual conhecido."""
 
     appearance = OptionProperty("light", options=("light", "dark"))
     surface_color = ListProperty([.97, .98, 1, 1])
@@ -380,8 +398,7 @@ class CampoTexto(TextInput):
     hint_color = ListProperty([.43, .51, .62, 1])
 
     def __init__(self, **kwargs):
-        appearance = kwargs.get("appearance", "light")
-        palette = self._palette(appearance)
+        palette = self._palette(kwargs.get("appearance", "light"))
         for prop, value in palette.items():
             kwargs.setdefault(prop, value)
         kwargs.setdefault("background_normal", "")
@@ -460,7 +477,112 @@ class CampoTexto(TextInput):
         self.cursor_color = self.focus_color
 
 
+class CampoTexto(MDTextField):
+    """Campo KivyMD com paletas compatíveis com as telas claras e escuras."""
+
+    appearance = OptionProperty("light", options=("light", "dark"))
+    surface_color = ListProperty([.97, .98, 1, 1])
+    disabled_surface_color = ListProperty([.88, .91, .95, 1])
+    border_color = ListProperty([.78, .84, .92, 1])
+    focus_color = ListProperty([.14, .49, .91, 1])
+    text_color = ListProperty([.08, .14, .23, 1])
+    hint_color = ListProperty([.43, .51, .62, 1])
+
+    def __init__(self, **kwargs):
+        appearance = kwargs.get("appearance", "light")
+        if not kwargs.get("icon_left"):
+            icon = self._icone_para_hint(kwargs.get("hint_text", ""))
+            if icon:
+                kwargs["icon_left"] = icon
+        palette = self._palette(appearance)
+        for prop, value in palette.items():
+            kwargs.setdefault(prop, value)
+        kwargs.setdefault("mode", "round")
+        kwargs.setdefault("fill_color_normal", palette["surface_color"])
+        kwargs.setdefault("fill_color_focus", palette["surface_color"])
+        kwargs.setdefault("line_color_normal", palette["border_color"])
+        kwargs.setdefault("line_color_focus", palette["focus_color"])
+        kwargs.setdefault("text_color_normal", palette["text_color"])
+        kwargs.setdefault("text_color_focus", palette["text_color"])
+        kwargs.setdefault("hint_text_color_normal", palette["hint_color"])
+        kwargs.setdefault("hint_text_color_focus", palette["focus_color"])
+        kwargs.setdefault("font_name", "Nunito")
+        kwargs.setdefault("font_name_hint_text", "Nunito")
+        kwargs.setdefault("font_name_helper_text", "Nunito")
+        kwargs.setdefault("cursor_color", palette["focus_color"])
+        kwargs.setdefault("padding", (dp(14), dp(12)))
+        kwargs.setdefault("write_tab", False)
+        super().__init__(**kwargs)
+        self.bind(
+            surface_color=self._aplicar_cores,
+            disabled_surface_color=self._aplicar_cores,
+            disabled=self._aplicar_cores,
+            border_color=self._aplicar_cores,
+            focus_color=self._aplicar_cores,
+            text_color=self._aplicar_cores,
+            hint_color=self._aplicar_cores,
+            appearance=self._aplicar_aparencia,
+        )
+        self._aplicar_cores()
+
+    @staticmethod
+    def _icone_para_hint(hint):
+        hint = str(hint).casefold()
+        for terms, icon in (
+            (("e-mail", "email", "contato"), "email-outline"),
+            (("senha", "password"), "lock-outline"),
+            (("buscar", "pesquisar", "filtro"), "magnify"),
+            (("turma", "matéria", "materia", "conteúdo", "conteudo"), "book-open-page-variant-outline"),
+            (("versão", "versao"), "tag-outline"),
+            (("descrição", "descricao", "mensagem", "comentário", "comentario"), "text-long"),
+            (("comando", "terminal"), "console-line"),
+            (("título", "titulo"), "format-title"),
+            (("nome",), "account-outline"),
+        ):
+            if any(term in hint for term in terms):
+                return icon
+        return ""
+
+    @staticmethod
+    def _palette(appearance):
+        if appearance == "dark":
+            return {
+                "surface_color": [.075, .13, .23, 1],
+                "disabled_surface_color": [.10, .15, .23, 1],
+                "border_color": [.19, .31, .48, 1],
+                "focus_color": [.28, .63, 1, 1],
+                "text_color": [.94, .97, 1, 1],
+                "hint_color": [.55, .65, .82, 1],
+            }
+        return {
+            "surface_color": [.97, .98, 1, 1],
+            "disabled_surface_color": [.90, .93, .97, 1],
+            "border_color": [.78, .84, .92, 1],
+            "focus_color": [.14, .49, .91, 1],
+            "text_color": [.08, .14, .23, 1],
+            "hint_color": [.43, .51, .62, 1],
+        }
+
+    def _aplicar_aparencia(self, *_args):
+        for prop, value in self._palette(self.appearance).items():
+            setattr(self, prop, value)
+        self._aplicar_cores()
+
+    def _aplicar_cores(self, *_args):
+        fill = self.disabled_surface_color if self.disabled else self.surface_color
+        self.fill_color_normal = fill
+        self.fill_color_focus = fill
+        self.line_color_normal = self.border_color
+        self.line_color_focus = self.focus_color
+        self.text_color_normal = self.text_color
+        self.text_color_focus = self.text_color
+        self.hint_text_color_normal = self.hint_color
+        self.hint_text_color_focus = self.focus_color
+        self.cursor_color = self.focus_color
+
+
 Factory.register("BotaoAcao", cls=BotaoAcao)
 Factory.register("IconeUI", cls=IconeUI)
 Factory.register("CampoTexto", cls=CampoTexto)
+Factory.register("CampoTextoClassico", cls=CampoTextoClassico)
 Factory.register('BotaoHover', cls=BotaoHover)

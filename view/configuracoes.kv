@@ -1,5 +1,71 @@
 #:import dp kivy.metrics.dp
 
+<ListaSeletorConfiguracao>:
+    do_scroll_x: False
+    bar_color: .32, .58, .92, .85
+    bar_inactive_color: .32, .58, .92, .20
+    canvas.before:
+        Color:
+            rgba: app.theme_surface
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+
+<OpcaoSeletorConfiguracao>:
+    size_hint_y: None
+    height: dp(42)
+    background_normal: ''
+    background_down: ''
+    background_color: 0, 0, 0, 0
+    color: app.theme_text
+    font_name: app.font_family_medium
+    font_size: '14sp'
+    halign: 'left'
+    valign: 'middle'
+    padding: dp(14), 0
+    canvas.before:
+        Color:
+            rgba: (.13, .32, .55, .38) if self.state == 'down' else (0, 0, 0, 0)
+        RoundedRectangle:
+            pos: self.x + dp(3), self.y + dp(2)
+            size: self.width - dp(6), self.height - dp(4)
+            radius: [dp(10)]
+
+<SeletorConfiguracao>:
+    option_cls: 'OpcaoSeletorConfiguracao'
+    dropdown_cls: 'ListaSeletorConfiguracao'
+    background_normal: ''
+    background_down: ''
+    background_color: 0, 0, 0, 0
+    color: app.theme_text
+    font_name: app.font_family_medium
+    font_size: '14sp'
+    halign: 'left'
+    valign: 'middle'
+    padding: dp(14), 0
+    text_size: self.width - dp(42), self.height
+    shorten: True
+    canvas.before:
+        Color:
+            rgba: app.theme_surface
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(12)]
+        Color:
+            rgba: (.24, .52, .86, 1) if root.is_open else (.42, .52, .66, .48)
+        Line:
+            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(12))
+            width: dp(1.2) if root.is_open else dp(.9)
+    IconeUI:
+        nome: 'chevron-up' if root.is_open else 'chevron-down'
+        size_hint: None, None
+        size: dp(18), dp(18)
+        font_size: '18sp'
+        color: app.theme_muted
+        pos: root.right - dp(30), root.center_y - dp(9)
+
 <ConfiguracaoOpcao>:
     size_hint_y: None
     height: dp(74) if not root.aviso else dp(90)
@@ -78,12 +144,23 @@
     canvas.after:
         StencilUnUse
         StencilPop
-    Image:
-        source: root.imagem
+    AnchorLayout:
         size_hint_x: None
         width: dp(30)
-        allow_stretch: True
-        keep_ratio: True
+        Image:
+            source: root.imagem
+            opacity: 1 if root.imagem else 0
+            size_hint: None, None
+            size: dp(28), dp(28)
+            allow_stretch: True
+            keep_ratio: True
+        IconeUI:
+            nome: root.simbolo if root.simbolo else 'apps'
+            opacity: 1 if root.simbolo and not root.imagem else 0
+            size_hint: None, None
+            size: dp(26), dp(26)
+            font_size: '22sp'
+            color: app.theme_text
     BoxLayout:
         orientation: 'vertical'
         Label:
@@ -117,7 +194,7 @@
             size_hint_y: None
             height: dp(54)
             BotaoAcao:
-                text: ''
+                text: '<'
                 variant: 'light'
                 size_hint: None, None
                 size: dp(52), dp(46)
@@ -195,6 +272,11 @@
                         descricao: 'Mostra uma confirmação antes de encerrar o aplicativo.'
                         key: 'confirm_before_close'
                         active: app.settings.confirm_before_close
+                    ConfiguracaoOpcao:
+                        titulo: 'Verificar Docker ao iniciar'
+                        descricao: 'Exibe tela de aviso e ativação se o Docker estiver fechado.'
+                        key: 'check_docker_on_startup'
+                        active: app.settings.check_docker_on_startup
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_y: None
@@ -218,6 +300,7 @@
                         size_hint_y: None
                         height: dp(64)
                         padding: dp(16), dp(10)
+                        spacing: dp(10)
                         canvas.before:
                             Color:
                                 rgba: app.theme_surface
@@ -225,6 +308,12 @@
                                 pos: self.pos
                                 size: self.size
                                 radius: [dp(14)]
+                        IconeUI:
+                            nome: 'theme-light-dark'
+                            size_hint: None, None
+                            size: dp(22), dp(22)
+                            font_size: '21sp'
+                            color: app.theme_muted
                         Label:
                             text: 'Tema da interface'
                             color: app.theme_text
@@ -232,7 +321,7 @@
                             font_size: '15sp'
                             halign: 'left'
                             text_size: self.width, None
-                        Spinner:
+                        SeletorConfiguracao:
                             text: app.settings.theme
                             values: ('Dark', 'Light') if app.settings.language.startswith('English') else ('Escuro', 'Claro')
                             size_hint_x: None
@@ -242,6 +331,7 @@
                         size_hint_y: None
                         height: dp(64)
                         padding: dp(16), dp(10)
+                        spacing: dp(10)
                         canvas.before:
                             Color:
                                 rgba: app.theme_surface
@@ -249,6 +339,12 @@
                                 pos: self.pos
                                 size: self.size
                                 radius: [dp(14)]
+                        IconeUI:
+                            nome: 'translate'
+                            size_hint: None, None
+                            size: dp(22), dp(22)
+                            font_size: '21sp'
+                            color: app.theme_muted
                         Label:
                             text: 'Idioma preferido'
                             color: app.theme_text
@@ -256,7 +352,7 @@
                             font_size: '15sp'
                             halign: 'left'
                             text_size: self.width, None
-                        Spinner:
+                        SeletorConfiguracao:
                             text: app.settings.language
                             values: ('Português (Brasil)', 'English')
                             size_hint_x: None
@@ -301,72 +397,154 @@
                             titulo: 'Google'
                             descricao: 'Navegador temporário'
                             imagem: 'assets/icon/google.png'
+                            simbolo: 'google-chrome'
                             key: 'show_google'
                             active: app.settings.show_google
                         ServicoOpcao:
                             titulo: 'YouTube'
                             descricao: 'Vídeos e conteúdos'
                             imagem: 'assets/icon/youtube.png'
+                            simbolo: 'youtube'
                             key: 'show_youtube'
                             active: app.settings.show_youtube
                         ServicoOpcao:
                             titulo: 'Outlook'
                             descricao: 'E-mail institucional web'
                             imagem: 'assets/icon/outlook.png'
+                            simbolo: 'microsoft-outlook'
                             key: 'show_outlook'
                             active: app.settings.show_outlook
                         ServicoOpcao:
                             titulo: 'Teams web'
                             descricao: 'Comunicação Microsoft'
                             imagem: 'assets/icon/teams.png'
+                            simbolo: 'microsoft-teams'
                             key: 'show_teams'
                             active: app.settings.show_teams
                         ServicoOpcao:
                             titulo: 'Word web'
                             descricao: 'Documentos Microsoft'
                             imagem: 'assets/icon/word.png'
+                            simbolo: 'microsoft-word'
                             key: 'show_word'
                             active: app.settings.show_word
                         ServicoOpcao:
                             titulo: 'Excel web'
                             descricao: 'Planilhas Microsoft'
                             imagem: 'assets/icon/excel.png'
+                            simbolo: 'microsoft-excel'
                             key: 'show_excel'
                             active: app.settings.show_excel
                         ServicoOpcao:
                             titulo: 'OneDrive web'
                             descricao: 'Arquivos Microsoft'
                             imagem: 'assets/icon/onedrive.png'
+                            simbolo: 'microsoft-onedrive'
                             key: 'show_onedrive'
                             active: app.settings.show_onedrive
                         ServicoOpcao:
                             titulo: 'Google Drive web'
                             descricao: 'Arquivos Google'
                             imagem: 'assets/icon/google_drive.png'
+                            simbolo: 'google-drive'
                             key: 'show_google_drive'
                             active: app.settings.show_google_drive
+                        ServicoOpcao:
+                            titulo: 'Google Agenda'
+                            descricao: 'Calendário e compromissos'
+                            imagem: 'assets/icon/google_calendar.png'
+                            simbolo: 'calendar-month-outline'
+                            key: 'show_google_calendar'
+                            active: app.settings.show_google_calendar
+                        ServicoOpcao:
+                            titulo: 'Google Meet'
+                            descricao: 'Reuniões e chamadas'
+                            imagem: 'assets/icon/google_meet.png'
+                            simbolo: 'video-outline'
+                            key: 'show_google_meet'
+                            active: app.settings.show_google_meet
+                        ServicoOpcao:
+                            titulo: 'Google Docs'
+                            descricao: 'Documentos colaborativos'
+                            imagem: 'assets/icon/google_docs.png'
+                            simbolo: 'file-document-outline'
+                            key: 'show_google_docs'
+                            active: app.settings.show_google_docs
+                        ServicoOpcao:
+                            titulo: 'Google Slides'
+                            descricao: 'Apresentações'
+                            imagem: 'assets/icon/google_slides.png'
+                            simbolo: 'presentation'
+                            key: 'show_google_slides'
+                            active: app.settings.show_google_slides
+                        ServicoOpcao:
+                            titulo: 'Google Forms'
+                            descricao: 'Formulários e pesquisas'
+                            imagem: 'assets/icon/google_forms.png'
+                            simbolo: 'clipboard-list-outline'
+                            key: 'show_google_forms'
+                            active: app.settings.show_google_forms
+                        ServicoOpcao:
+                            titulo: 'Google Maps'
+                            descricao: 'Mapas e localização'
+                            imagem: 'assets/icon/google_maps.png'
+                            simbolo: 'map-marker-outline'
+                            key: 'show_google_maps'
+                            active: app.settings.show_google_maps
+                        ServicoOpcao:
+                            titulo: 'Google Keep'
+                            descricao: 'Notas rápidas'
+                            imagem: 'assets/icon/google_keep.png'
+                            simbolo: 'note-text-outline'
+                            key: 'show_google_keep'
+                            active: app.settings.show_google_keep
+                        ServicoOpcao:
+                            titulo: 'Canva'
+                            descricao: 'Designs e apresentações'
+                            imagem: 'assets/icon/canva.png'
+                            simbolo: 'palette-outline'
+                            key: 'show_canva'
+                            active: app.settings.show_canva
+                        ServicoOpcao:
+                            titulo: 'Notion'
+                            descricao: 'Notas e organização'
+                            imagem: 'assets/icon/notion.png'
+                            simbolo: 'notebook-outline'
+                            key: 'show_notion'
+                            active: app.settings.show_notion
+                        ServicoOpcao:
+                            titulo: 'Trello'
+                            descricao: 'Quadros e tarefas'
+                            imagem: 'assets/icon/trello.png'
+                            simbolo: 'view-column-outline'
+                            key: 'show_trello'
+                            active: app.settings.show_trello
                         ServicoOpcao:
                             titulo: 'Classroom'
                             descricao: 'Sala de aula Google'
                             imagem: 'assets/icon/classroom.png'
+                            simbolo: 'google-classroom'
                             key: 'show_classroom'
                             active: app.settings.show_classroom
                         ServicoOpcao:
                             titulo: 'Discord web'
                             descricao: 'Comunicação online'
                             imagem: 'assets/icon/discord.png'
+                            simbolo: 'message-text-outline'
                             key: 'show_discord'
                             active: app.settings.show_discord
                         ServicoOpcao:
                             titulo: 'GitHub'
                             descricao: 'Projetos e repositórios'
                             imagem: 'assets/icon/github.png'
+                            simbolo: 'github'
                             key: 'show_github'
                             active: app.settings.show_github
                         ServicoOpcao:
                             titulo: 'Git Bash'
                             descricao: 'Terminal isolado'
                             imagem: 'assets/icon/git.png'
+                            simbolo: 'console-line'
                             key: 'show_git'
                             active: app.settings.show_git
                 BoxLayout:
@@ -453,6 +631,7 @@
                         size_hint_y: None
                         height: dp(64)
                         padding: dp(16), dp(10)
+                        spacing: dp(10)
                         canvas.before:
                             Color:
                                 rgba: app.theme_surface
@@ -460,6 +639,12 @@
                                 pos: self.pos
                                 size: self.size
                                 radius: [dp(14)]
+                        IconeUI:
+                            nome: 'source-branch'
+                            size_hint: None, None
+                            size: dp(22), dp(22)
+                            font_size: '21sp'
+                            color: app.theme_muted
                         Label:
                             text: 'Canal de atualização'
                             color: app.theme_text
@@ -467,7 +652,7 @@
                             font_size: '15sp'
                             halign: 'left'
                             text_size: self.width, None
-                        Spinner:
+                        SeletorConfiguracao:
                             text: app.settings.update_channel
                             values: ('Stable', 'Beta', 'Development') if app.settings.language.startswith('English') else ('Estável', 'Beta', 'Desenvolvimento')
                             size_hint_x: None
@@ -476,12 +661,14 @@
                     BotaoAcao:
                         variant: 'primary'
                         text: 'Verificar atualizações agora'
+                        icone: 'refresh'
                         size_hint_y: None
                         height: dp(50)
                         on_release: root.verificar_atualizacoes()
                     BotaoAcao:
                         variant: 'secondary'
                         text: 'Abrir página de lançamentos'
+                        icone: 'open-in-new'
                         size_hint_y: None
                         height: dp(46) if root.latest_update_url else 0
                         opacity: 1 if root.latest_update_url else 0
@@ -560,6 +747,7 @@
                         height: dp(64)
                         disabled: not app.is_moderator
                         padding: dp(16), dp(10)
+                        spacing: dp(10)
                         canvas.before:
                             Color:
                                 rgba: app.theme_surface
@@ -567,6 +755,12 @@
                                 pos: self.pos
                                 size: self.size
                                 radius: [dp(14)]
+                        IconeUI:
+                            nome: 'timer-outline'
+                            size_hint: None, None
+                            size: dp(22), dp(22)
+                            font_size: '21sp'
+                            color: app.theme_muted
                         Label:
                             text: 'Tempo máximo de sessão'
                             color: app.theme_text
@@ -574,7 +768,7 @@
                             font_size: '15sp'
                             halign: 'left'
                             text_size: self.width, None
-                        Spinner:
+                        SeletorConfiguracao:
                             text: root.session_time_label(app.settings.maximum_session_time, app.settings.language)
                             values: ('30 minutes', '1 hour', '2 hours', '4 hours', '8 hours', 'Unlimited') if app.settings.language.startswith('English') else ('30 minutos', '1 hora', '2 horas', '4 horas', '8 horas', 'Ilimitado')
                             size_hint_x: None

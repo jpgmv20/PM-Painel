@@ -33,6 +33,7 @@
 
             BotaoAcao:
                 text: 'Painel'
+                icone: 'home-outline'
                 variant: 'secondary'
                 size_hint_x: None
                 width: dp(124)
@@ -62,6 +63,7 @@
                 id: busca_equipes
                 text: root.filtro_equipes
                 hint_text: 'Buscar turma ou matéria'
+                icon_left: 'magnify'
                 multiline: False
                 size_hint_x: None
                 width: dp(250) if not root.equipe_id else 0
@@ -75,6 +77,7 @@
 
             BotaoAcao:
                 text: 'Criar turma'
+                icone: 'plus-circle-outline'
                 variant: 'primary'
                 size_hint_x: None
                 width: dp(156) if root.pode_gerenciar_materia and not root.equipe_id else 0

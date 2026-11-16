@@ -1,0 +1,77 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", Inter, system-ui, sans-serif;
+  background: #0b1220;
+  color: #e8eef7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --surface: #121c2c;
+  --surface-raised: #182437;
+  --stroke: #26364d;
+  --muted: #95a6bd;
+  --blue: #75b8ff;
+  --green: #40d49a;
+  --red: #ff7979;
+}
+
+* { box-sizing: border-box; }
+
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+
+body {
+  min-width: 760px;
+  background:
+    radial-gradient(ellipse at 50% -30%, rgba(43, 101, 175, .2), transparent 60%),
+    #0b1220;
+}
+
+.app-shell { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 20px 22px 14px; gap: 16px; }
+
+.topbar { display: flex; align-items: center; gap: 13px; flex: 0 0 auto; min-height: 56px; }
+.brand-mark {
+  display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #345578;
+  border-radius: 13px; color: var(--blue); background: linear-gradient(145deg, #1b3553, #13243a);
+  font: 700 17px/1 Consolas, monospace; box-shadow: inset 0 1px rgba(255,255,255,.06);
+}
+.brand-copy { display: grid; gap: 2px; }
+.eyebrow { color: #8298b6; font-size: 9px; font-weight: 750; letter-spacing: .16em; }
+h1 { margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -.025em; }
+.topbar-meta { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: #a7bad1; font-size: 11px; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px rgba(64,212,154,.55); }
+
+.terminal-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); flex: 1 1 auto; gap: 14px; min-height: 0; }
+.terminal-card {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 13px;
+  border: 1px solid var(--stroke); border-radius: 16px; background: linear-gradient(180deg, #152236, #101a29);
+  box-shadow: 0 12px 32px rgba(0,0,0,.25), inset 0 1px rgba(255,255,255,.035);
+}
+.terminal-heading { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; padding: 0 2px 11px; }
+.machine-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #9dceff; background: #1b3655; font-size: 13px; font-weight: 800; }
+.machine-icon-b { color: #b7a7ff; background: #2a2852; }
+.machine-copy { display: grid; gap: 3px; }
+.machine-copy h2 { margin: 0; font-size: 13px; font-weight: 700; }
+.machine-copy > span { color: var(--muted); font-size: 10px; }
+.machine-copy code, .terminal-footer code { color: #b9d9ff; font-family: Consolas, "Cascadia Code", monospace; }
+.connection-status { margin-left: auto; color: #e4b86c; font-size: 10px; }
+.connection-status.connected { color: var(--green); }
+.connection-status.error { color: var(--red); }
+.clear-button {
+  border: 1px solid #31425a; border-radius: 8px; padding: 5px 8px; color: #b6c6da;
+  background: #18263a; font: inherit; font-size: 10px; cursor: pointer;
+}
+.clear-button:hover { border-color: #557da8; color: #e8f2ff; background: #20334b; }
+.terminal-host { position: relative; flex: 1 1 auto; min-height: 0; padding: 10px 8px; overflow: hidden; border: 1px solid #24354b; border-radius: 11px; background: #080e18; }
+.terminal-host .xterm { height: 100%; }
+.terminal-host .xterm-viewport { scrollbar-color: #354b66 #080e18; }
+.terminal-footer { display: flex; align-items: center; flex: 0 0 auto; gap: 7px; padding: 10px 3px 0; color: #7e90a8; font-size: 9px; }
+.footer-separator { color: #536781; }
+.app-footer { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; color: #7f91a9; font-size: 10px; }
+.secure-label { display: inline-flex; align-items: center; gap: 6px; color: #7bb89e; }
+.secure-label span { font-size: 8px; }
+
+@media (max-width: 940px) {
+  .app-shell { padding: 14px; gap: 10px; }
+  .terminal-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(240px, 1fr) minmax(240px, 1fr); gap: 10px; }
+  .terminal-card { padding: 10px; }
+  .app-footer { font-size: 9px; }
+}

@@ -1,22 +1,33 @@
 # view/componentes.kv
 
+<Button>:
+    font_name: app.font_family_medium
+
+<CartaoMaterial>:
+    style: 'elevated'
+    radius: [dp(22), dp(22), dp(22), dp(22)]
+    elevation: 2
+
 <MenuPerfil>:
     auto_width: False
     width: dp(150)
 
     BotaoFlutuante:
         text: "Perfil"
+        icone: 'account-circle-outline'
         on_release: root.select('perfil')
     
     BotaoFlutuante:
         id: logout_btn
         text: 'Logout'
+        icone: 'logout-variant'
         disabled: root.logout_bloqueado
         color: (0.75, 0.75, 0.75, 1) if root.logout_bloqueado else (1, 0.3, 0.3, 1)
         on_release: root.select('logout')
 
     BotaoFlutuante:
         text: 'Sair'
+        icone: 'exit-to-app'
         color: 1, 0.3, 0.3, 1
         on_release: app.solicitar_saida()
 
@@ -155,82 +166,70 @@
 
 
 <CardMenu>:
-    orientation: 'vertical'
+    orientation: 'horizontal'
     padding: dp(16)
-    spacing: dp(10)
+    spacing: dp(12)
     size_hint: 1, 1
+    md_bg_color: app.theme_surface
+    elevation: 2
+    radius: [dp(18), dp(18), dp(18), dp(18)]
+    ripple_behavior: True
 
-    canvas.before:
-        PushMatrix
-        Translate:
-            y: root.elevacao
-        Color:
-            rgba: 0, 0, 0, root.opacidade_sombra
-        RoundedRectangle:
-            pos: self.x + root.deslocamento_sombra[0], self.y + root.deslocamento_sombra[1]
-            size: self.size
-            radius: [dp(22)]
-        Color:
-            rgba: root.cor_fundo
-        RoundedRectangle:
-            pos: self.pos
-            size: self.size
-            radius: [dp(22)]
-
-    canvas.after:
-        PopMatrix
-
-    BoxLayout:
-        size_hint_y: .62
+    AnchorLayout:
+        size_hint_x: None
+        width: dp(58)
         canvas.before:
-            StencilPush
+            Color:
+                rgba: (.13, .23, .37, 1) if app.settings.theme == 'Escuro' else (.90, .94, .99, 1)
             RoundedRectangle:
-                pos: self.pos
-                size: self.size
-                radius: [dp(14)]
-            StencilUse
-        canvas.after:
-            StencilUnUse
-            StencilPop
+                pos: self.center_x - dp(26), self.center_y - dp(26)
+                size: dp(52), dp(52)
+                radius: [dp(16)]
 
-        Image:
-            source: root.imagem_source
-            fit_mode: 'cover'
-            size_hint: 1, 1
+        IconeUI:
+            nome: root.icone
+            size_hint: None, None
+            size: dp(40), dp(40)
+            font_size: '34sp'
+            color: (.48, .72, 1, 1) if app.settings.theme == 'Escuro' else (0, .275, .588, 1)
 
-    BoxLayout:
-        orientation: 'vertical'
-        spacing: dp(6)
-        size_hint_y: .38
-        canvas.before:
-            StencilPush
-            Rectangle:
-                pos: self.pos
-                size: self.size
-            StencilUse
-        canvas.after:
-            StencilUnUse
-            StencilPop
+    AnchorLayout:
+        anchor_x: 'left'
+        anchor_y: 'center'
 
-        Label:
-            text: root.titulo
-            font_size: '26sp'
-            bold: True
-            color: 1, 1, 1, 1
-            halign: 'left'
-            valign: 'middle'
-            text_size: self.width, self.height
+        BoxLayout:
+            orientation: 'vertical'
             size_hint_y: None
-            height: dp(72)
+            height: self.minimum_height
+            spacing: dp(5)
 
-        Label:
-            text: root.descricao
-            font_size: '16sp'
-            color: 0.9, 0.94, 1, 1
-            halign: 'left'
-            valign: 'top'
-            text_size: self.size
-            size_hint_y: 1
+            Label:
+                text: root.titulo
+                font_size: '18sp'
+                bold: True
+                color: app.theme_text
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.width, None
+                size_hint_y: None
+                height: self.texture_size[1]
+
+            Label:
+                text: root.descricao
+                font_size: '13sp'
+                color: app.theme_muted
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.width, None
+                size_hint_y: None
+                height: self.texture_size[1]
+
+    IconeUI:
+        nome: 'chevron-right'
+        size_hint: None, None
+        size: dp(22), dp(22)
+        font_size: '20sp'
+        color: app.theme_muted
 
 
 <LayoutFundo>:
@@ -244,25 +243,25 @@
             size: self.size
             texture: root.fundo_textura  
 
-        # --- B) LINHAS GEOMÉTRICAS ---
+        # --- B) LINHAS GEOMÉTRICAS DECORATIVAS (Inferior / Lateral) ---
         Color:
-            rgba: 1, 1, 1, 0.15  
+            rgba: 1, 1, 1, 0.08  
         Line:
-            points: [self.x, self.top - 40, self.x + 60, self.top - 40, self.x + 100, self.top - 80, self.x + 100, self.top - 160]
-            width: 1.2
+            points: [self.x, self.y + 130, self.x + 50, self.y + 130, self.x + 90, self.y + 90, self.x + 90, self.y + 30]
+            width: 1.1
         Line:
-            points: [self.x, self.top - 70, self.x + 40, self.top - 70, self.x + 70, self.top - 100, self.x + 70, self.top - 130]
-            width: 1.2
+            points: [self.x, self.y + 90, self.x + 35, self.y + 90, self.x + 65, self.y + 60, self.x + 65, self.y + 25]
+            width: 1.1
         Line:
-            points: [self.x + 130, self.top, self.x + 130, self.top - 50, self.x + 80, self.top - 100]
-            width: 1.2
+            points: [self.x + 120, self.y + 25, self.x + 120, self.y + 65, self.x + 75, self.y + 105]
+            width: 1.1
 
-        # --- C) MALHA DE PONTOS ---
+        # --- C) MALHA DE PONTOS SUTIS ---
         Color:
-            rgba: 1, 1, 1, 0.2  
+            rgba: 1, 1, 1, 0.12  
         Point:
             pointsize: 2
-            points: [self.right - 40, self.top - 30, self.right - 60, self.top - 30, self.right - 80, self.top - 30, self.right - 100, self.top - 30, self.right - 40, self.top - 50, self.right - 60, self.top - 50, self.right - 80, self.top - 50, self.right - 100, self.top - 50, self.right - 40, self.top - 70, self.right - 60, self.top - 70, self.right - 80, self.top - 70, self.right - 100, self.top - 70, self.right - 40, self.top - 90, self.right - 60, self.top - 90, self.right - 80, self.top - 90, self.right - 100, self.top - 90]
+            points: [self.right - 40, self.y + 40, self.right - 60, self.y + 40, self.right - 80, self.y + 40, self.right - 100, self.y + 40, self.right - 40, self.y + 60, self.right - 60, self.y + 60, self.right - 80, self.y + 60, self.right - 100, self.y + 60, self.right - 40, self.y + 80, self.right - 60, self.y + 80, self.right - 80, self.y + 80, self.right - 100, self.y + 80, self.right - 40, self.y + 100, self.right - 60, self.y + 100, self.right - 80, self.y + 100, self.right - 100, self.y + 100]
 
 
 
@@ -274,9 +273,11 @@
     background_normal: ''
     background_down: ''
     font_size: '14sp'
+    font_name: app.font_family_medium
     bold: True
+    halign: 'left' if root.icone else 'center'
+    padding: (dp(42), dp(8)) if root.icone and root.icon_position == 'left' else (dp(18), dp(8)) if root.icone else (dp(16), dp(8))
     color: (0.08, 0.20, 0.39, 1) if root.variant == 'light' else (1, 1, 1, 1)
-    padding: dp(16), dp(8)
 
     canvas.before:
         Color:
@@ -286,7 +287,7 @@
             size: self.size
             radius: [min(dp(28), self.height / 2)]
         Color:
-            rgba: (0.05, 0.24, 0.52, 1) if root.variant == 'primary' and self.state == 'down' else (0.15, 0.48, 0.86, 1) if root.variant == 'primary' and self.hovering else (0.08, 0.34, 0.72, 1) if root.variant == 'primary' else (0.50, 0.13, 0.20, 1) if root.variant == 'danger' and self.state == 'down' else (0.76, 0.20, 0.27, 1) if root.variant == 'danger' else (0.22, 0.38, 0.61, 0.82) if root.variant == 'secondary' and self.hovering else (0.10, 0.23, 0.43, 0.62) if root.variant == 'secondary' else (0.78, 0.87, 0.98, 1) if root.variant == 'light' and self.state == 'down' else (0.94, 0.97, 1, 1) if root.variant == 'light' and self.hovering else (0.86, 0.92, 0.99, 1) if root.variant == 'light' else (0.12, 0.30, 0.53, 0.92) if self.hovering else (0.06, 0.16, 0.32, 0.72)
+            rgba: (0.02, 0.20, 0.43, 1) if root.variant == 'primary' and self.state == 'down' else (0.04, 0.34, 0.70, 1) if root.variant == 'primary' and self.hovering else (0, 0.275, 0.588, 1) if root.variant == 'primary' else (0.50, 0.13, 0.20, 1) if root.variant == 'danger' and self.state == 'down' else (0.76, 0.20, 0.27, 1) if root.variant == 'danger' else (0.22, 0.38, 0.61, 0.82) if root.variant == 'secondary' and self.hovering else (0.10, 0.23, 0.43, 0.62) if root.variant == 'secondary' else (0.78, 0.87, 0.98, 1) if root.variant == 'light' and self.state == 'down' else (0.94, 0.97, 1, 1) if root.variant == 'light' and self.hovering else (0.86, 0.92, 0.99, 1) if root.variant == 'light' else (0.12, 0.30, 0.53, 0.92) if self.hovering else (0.06, 0.16, 0.32, 0.72)
         RoundedRectangle:
             pos: self.pos
             size: self.size
@@ -296,6 +297,16 @@
         Line:
             rounded_rectangle: (self.x, self.y, self.width, self.height, min(dp(28), self.height / 2))
             width: dp(1.1)
+
+    IconeUI:
+        nome: root.icone
+        opacity: 1 if root.icone else 0
+        size_hint: None, None
+        size: dp(20), dp(20)
+        font_size: '20sp'
+        color: root.color
+        pos:
+            (root.x + dp(14), root.center_y - self.height / 2) if root.icon_position == 'left' else (root.right - self.width - dp(14), root.center_y - self.height / 2)
 
 
 <BotaoPrincipal@BotaoAcao>:

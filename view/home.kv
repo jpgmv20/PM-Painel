@@ -2,30 +2,19 @@
 
 <AreaNavegador>:
     orientation: 'vertical'
-    spacing: dp(10)
-    padding: dp(16)
-    size_hint_y: None
-    height: dp(190)
-
-    canvas.before:
-        Color:
-            rgba: 0, 0, 0, 0.22
-        RoundedRectangle:
-            pos: self.x + dp(6), self.y - dp(6)
-            size: self.size
-            radius: [dp(22)]
-        Color:
-            rgba: 0.06, 0.21, 0.48, 0.98
-        RoundedRectangle:
-            pos: self.pos
-            size: self.size
-            radius: [dp(22)]
+    spacing: dp(8)
+    padding: dp(14)
+    size_hint_y: .52
+    style: 'elevated'
+    elevation: 3
+    radius: [dp(22), dp(22), dp(22), dp(22)]
+    md_bg_color: .06, .21, .48, .98
 
     Label:
-        text: 'Acessos rápidos'
+        text: 'Aplicativos e serviços'
         color: 1, 1, 1, 1
         bold: True
-        font_size: '17sp'
+        font_size: '16sp'
         size_hint_y: None
         height: dp(24)
 
@@ -38,69 +27,65 @@
 
         GridLayout:
             id: shortcuts_grid
-            rows: 1
+            rows: 2
+            orientation: 'lr-tb'
             size_hint: None, 1
             col_force_default: True
-            col_default_width: max(dp(160), (root.width - dp(92)) / 7)
+            col_default_width: max(dp(168), min(dp(320), (root.width - dp(96)) / 6))
             width: max(root.width - dp(32), self.minimum_width)
-            spacing: dp(10)
+            spacing: dp(10), dp(8)
 
 
 <AtalhoNavegador>:
-    text: ''
-    background_normal: ''
-    background_down: ''
-    background_color: 0, 0, 0, 0
+    orientation: 'vertical'
+    padding: dp(10), dp(8)
+    spacing: dp(4)
+    style: 'filled'
+    md_bg_color: app.theme_surface
+    radius: [dp(18), dp(18), dp(18), dp(18)]
+    elevation: 2
+    ripple_behavior: True
+    focus_behavior: True
 
-    canvas.before:
-        Color:
-            rgba: 0, 0, 0, 0.42 if root.hovering else 0.18
-        RoundedRectangle:
-            pos: self.x + dp(3), self.y - (dp(7) if root.hovering else dp(3))
-            size: self.size
-            radius: [dp(28), dp(10), dp(28), dp(10)]
-        Color:
-            rgba: (0.10, 0.33, 0.68, 1) if root.hovering else ((0.04, 0.14, 0.34, 0.92) if self.state == 'normal' else (0.12, 0.37, 0.75, 1))
-        RoundedRectangle:
-            pos: self.pos
-            size: self.size
-            radius: [dp(28), dp(10), dp(28), dp(10)]
-        Color:
-            rgba: (.38, .74, 1, .82) if root.hovering else (.38, .74, 1, .24)
-        Line:
-            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(28), dp(10), dp(28), dp(10))
-            width: dp(1)
+    AnchorLayout:
+        anchor_x: 'center'
+        anchor_y: 'center'
 
-    Image:
-        source: root.icone
-        opacity: 1 if root.icone else 0
-        size_hint: None, None
-        size: dp(52), dp(52)
-        pos: root.x + (root.width - self.width) / 2, root.y + root.height * .36
-        allow_stretch: True
-        keep_ratio: True
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_y: None
+            height: self.minimum_height
+            spacing: dp(4)
 
-    Label:
-        text: root.simbolo
-        opacity: 1 if root.simbolo else 0
-        color: 1, 1, 1, 1
-        bold: True
-        font_size: '30sp'
-        size_hint: None, None
-        size: dp(52), dp(52)
-        halign: 'center'
-        valign: 'middle'
-        text_size: self.size
-        pos: root.x + (root.width - self.width) / 2, root.y + root.height * .36
+            AnchorLayout:
+                size_hint_y: None
+                height: dp(44)
+                Image:
+                    source: root.icone
+                    opacity: 1 if root.icone else 0
+                    size_hint: None, None
+                    size: dp(38), dp(38)
+                    allow_stretch: True
+                    keep_ratio: True
 
-    Label:
-        text: root.titulo
-        color: 1, 1, 1, 1
-        bold: True
-        font_size: '13sp'
-        size_hint: 1, None
-        height: dp(24)
-        pos: root.x, root.y + root.height * .08
+                IconeUI:
+                    nome: root.simbolo if root.simbolo else 'apps'
+                    opacity: 1 if root.simbolo and not root.icone else 0
+                    size_hint: None, None
+                    size: dp(38), dp(38)
+                    font_size: '32sp'
+                    color: app.theme_text
+
+            Label:
+                text: root.titulo
+                color: app.theme_text
+                bold: True
+                font_size: '13sp'
+                size_hint_y: None
+                height: dp(24)
+                halign: 'center'
+                valign: 'middle'
+                text_size: self.size
 
 
 <TelaPrincipal>:
@@ -112,76 +97,71 @@
 
     BoxLayout:
         orientation: 'vertical'
-        padding: dp(28), dp(16)
-        spacing: dp(14)
+        padding: dp(24), dp(14)
+        spacing: dp(12)
 
-        ScrollView:
-            id: menu_scroll
-            do_scroll_x: True
-            do_scroll_y: False
-            scroll_type: ['bars', 'content']
-            bar_width: dp(6)
-            bar_color: 0.25, 0.50, 0.85, 0.8
-            bar_inactive_color: 0.25, 0.50, 0.85, 0.18
+        CartaoMaterial:
+            size_hint_y: .48
+            md_bg_color: app.theme_surface
+            padding: dp(8)
 
-            canvas.before:
-                Color:
-                    rgba: 1, 1, 1, 0.96
-                RoundedRectangle:
-                    pos: self.pos
-                    size: self.size
-                    radius: [22]
+            ScrollView:
+                id: menu_scroll
+                do_scroll_x: False
+                do_scroll_y: True
+                bar_width: dp(5)
+                bar_color: 0.25, 0.50, 0.85, 0.65
+                bar_inactive_color: 0.25, 0.50, 0.85, 0.14
 
-            BoxLayout:
-                id: menu_grid
-                orientation: 'horizontal'
-                padding: dp(12), dp(12), dp(30), dp(20)
-                spacing: dp(18)
-                size_hint: None, 1
-                width: self.minimum_width
-                height: menu_scroll.height
+                GridLayout:
+                    id: menu_grid
+                    cols: 2 if menu_scroll.width >= dp(960) else 1
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: dp(8)
+                    spacing: dp(12)
 
-                CardMenu:
-                    titulo: "Extensões"
-                    descricao: "Acesse o catálogo, instale módulos aprovados e execute as extensões instaladas."
-                    imagem_source: "assets/img/config.jpg"
-                    size_hint: None, 1
-                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2)
-                    on_release: root.abrir_extensoes()
+                    CardMenu:
+                        titulo: "Extensões"
+                        descricao: "Acesse o catálogo, instale módulos aprovados e execute as extensões instaladas."
+                        icone: 'puzzle-outline'
+                        size_hint_y: None
+                        height: dp(186)
+                        on_release: root.abrir_extensoes()
 
-                CardMenu:
-                    titulo: "Conteúdo Teórico e Didático"
-                    descricao: "Acesse materiais de estudo, tutoriais e recursos educacionais para aprimorar suas habilidades."
-                    imagem_source: "assets/img/book.png"
-                    size_hint: None, 1
-                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2)
-                    on_release: root.abrir_materias()
+                    CardMenu:
+                        titulo: "Conteúdo Teórico e Didático"
+                        descricao: "Acesse materiais de estudo, tutoriais e recursos educacionais para aprimorar suas habilidades."
+                        icone: 'book-open-page-variant-outline'
+                        size_hint_y: None
+                        height: dp(186)
+                        on_release: root.abrir_materias()
 
-                CardMenu:
-                    titulo: "Conteúdo Prático e Aplicações"
-                    descricao: "Abra matérias práticas fixas do sistema e simule circuitos interativos."
-                    imagem_source: "assets/img/pratic.png"
-                    size_hint: None, 1
-                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2)
-                    on_release: root.abrir_praticas()
+                    CardMenu:
+                        titulo: "Conteúdo Prático e Aplicações"
+                        descricao: "Abra matérias práticas fixas do sistema e simule circuitos interativos."
+                        icone: 'flask-outline'
+                        size_hint_y: None
+                        height: dp(186)
+                        on_release: root.abrir_praticas()
 
-                CardMenu:
-                    titulo: "Configurações"
-                    descricao: "Personalize sua conta, os serviços rápidos e o comportamento do PM-Painel."
-                    imagem_source: "assets/img/config.jpg"
-                    size_hint: None, 1
-                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2)
-                    on_release: root.abrir_configuracoes()
+                    CardMenu:
+                        titulo: "Configurações"
+                        descricao: "Personalize sua conta, os serviços rápidos e o comportamento do PM-Painel."
+                        icone: 'cog-outline'
+                        size_hint_y: None
+                        height: dp(186)
+                        on_release: root.abrir_configuracoes()
 
-                CardMenu:
-                    titulo: "Painel de controle"
-                    descricao: "Gerencie contas de equipe e matérias sob responsabilidade de cada professor."
-                    imagem_source: "assets/img/book.png"
-                    opacity: 1 if root.is_moderator else 0
-                    disabled: not root.is_moderator
-                    size_hint: None, 1
-                    width: max(dp(280), (menu_scroll.width - dp(92)) / 2) if root.is_moderator else dp(0)
-                    on_release: root.abrir_usuarios()
+                    CardMenu:
+                        titulo: "Painel de controle"
+                        descricao: "Gerencie contas de equipe e matérias sob responsabilidade de cada professor."
+                        icone: 'account-group-outline'
+                        opacity: 1 if root.is_moderator else 0
+                        disabled: not root.is_moderator
+                        size_hint_y: None
+                        height: dp(186) if root.is_moderator else 0
+                        on_release: root.abrir_usuarios()
 
         AreaNavegador:
             id: browser_area

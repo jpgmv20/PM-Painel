@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
+from model.componentes import BotaoAcao
 from model.materias import Comentario, Conteudo, Materia, Publicacao, Topico, Trabalho
 from service.materias import MateriasService
 from service.permissoes import Papel, PermissionService
@@ -46,6 +47,11 @@ class MateriasServiceTests(unittest.TestCase):
             reaberto = MateriasService(service.path).obter(materia.id)
             self.assertEqual(reaberto.publicacoes[0].comentarios[0].mensagem, "Entendido")
             self.assertIn("aluno@example.com", reaberto.trabalhos[0].entregue_por)
+
+    def test_botao_acao_suporta_icone_na_direita(self):
+        botao = BotaoAcao(text="Prosseguir", icone="arrow-right", icon_position="right")
+        self.assertEqual(botao.icon_position, "right")
+        self.assertEqual(botao.icone, "arrow-right")
 
 
 if __name__ == "__main__":

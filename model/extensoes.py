@@ -15,7 +15,8 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import SlideTransition
 
-from model.componentes import BotaoAcao, CampoTexto, LayoutFundo
+from kivy.uix.widget import Widget
+from model.componentes import BotaoAcao, CampoTexto, LayoutFundo, IconeUI
 
 
 class TelaExtensoes(LayoutFundo):
@@ -43,46 +44,195 @@ class TelaExtensoes(LayoutFundo):
         area.clear_widgets()
         entries = self._app.extensions_service.list_extensions()
         if not entries:
-            area.add_widget(self._label(
-                "Nenhuma extensão no catálogo. Envie um arquivo .py para revisão."
+            area.add_widget(self._card_vazio(
+                "Nenhuma extensão cadastrada",
+                "Envie um script Python (.py) para revisão do laboratório através do botão 'Enviar extensão' acima.",
+                "puzzle-outline"
             ))
             return
         can_approve = self._app.permission_service.perfil_pode_aprovar_extensoes(profile)
         for extension in entries:
-            card = BoxLayout(
-                orientation="vertical", size_hint_y=None, height=dp(128),
-                padding=dp(12), spacing=dp(4),
+            area.add_widget(self._criar_cartao_extensao(extension, can_approve))
+
+    def _criar_cartao_extensao(self, extension: dict, can_approve: bool) -> BoxLayout:
+        from kivy.graphics import Color, RoundedRectangle, Line
+        status = extension.get("status", "pendente").lower()
+        status_display = status.capitalize()
+
+        card = BoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(88),
+            padding=(dp(16), dp(10)),
+            spacing=dp(14),
+        )
+        with card.canvas.before:
+            Color(0.06, 0.10, 0.18, 0.88)
+            background = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12)])
+            Color(0.18, 0.32, 0.52, 0.45)
+            border = Line(rounded_rectangle=(card.x, card.y, card.width, card.height, dp(12)), width=dp(1))
+
+        card.bind(
+            pos=lambda item, value, s=background, b=border: (
+                setattr(s, "pos", value),
+                setattr(b, "rounded_rectangle", (value[0], value[1], item.width, item.height, dp(12)))
+            ),
+            size=lambda item, value, s=background, b=border: (
+                setattr(s, "size", value),
+                setattr(b, "rounded_rectangle", (item.x, item.y, value[0], value[1], dp(12)))
+            ),
+        )
+
+        # Avatar Ícone Extensão
+        avatar = BoxLayout(size_hint=(None, None), size=(dp(44), dp(44)), pos_hint={"center_y": 0.5})
+        with avatar.canvas.before:
+            Color(0.12, 0.22, 0.38, 1)
+            av_bg = RoundedRectangle(pos=avatar.pos, size=avatar.size, radius=[dp(22)])
+            Color(0.28, 0.50, 0.82, 0.7)
+            av_border = Line(rounded_rectangle=(avatar.x, avatar.y, avatar.width, avatar.height, dp(22)), width=dp(1.2))
+        avatar.bind(
+            pos=lambda item, value, s=av_bg, b=av_border: (
+                setattr(s, "pos", value),
+                setattr(b, "rounded_rectangle", (value[0], value[1], item.width, item.height, dp(22)))
+            ),
+            size=lambda item, value, s=av_bg, b=av_border: (
+                setattr(s, "size", value),
+                setattr(b, "rounded_rectangle", (item.x, item.y, value[0], value[1], dp(22)))
+            ),
+        )
+        avatar.add_widget(IconeUI(nome="puzzle-outline", size_hint=(1, 1), font_size="22sp", color=(0.42, 0.78, 1, 1), halign="center", valign="middle"))
+        card.add_widget(avatar)
+
+        # Informações Centrais
+        info_col = BoxLayout(orientation="vertical", spacing=dp(3), size_hint_x=1)
+        top_row = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(26))
+        lbl_nome = Label(
+            text=extension.get("name", "Extensão"),
+            bold=True,
+            font_size="15sp",
+            color=(0.92, 0.96, 1, 1),
+            size_hint=(None, None),
+            height=dp(24),
+            halign="left",
+            valign="middle"
+        )
+        lbl_nome.bind(texture_size=lambda item, size: setattr(item, "width", size[0]))
+        top_row.add_widget(lbl_nome)
+
+        # Versão badge
+        ver_tag = self._badge_tag(f"v{extension.get('version', '1.0')}", (0.15, 0.32, 0.60, 0.28), (0.55, 0.82, 1, 1))
+        top_row.add_widget(ver_tag)
+
+        # Status badge
+        if status == "instalada":
+            st_tag = self._badge_tag("Instalada", (0.12, 0.65, 0.35, 0.28), (0.45, 0.95, 0.65, 1))
+        elif status == "aprovada":
+            st_tag = self._badge_tag("Aprovada", (0.15, 0.45, 0.85, 0.28), (0.50, 0.80, 1, 1))
+        else:
+            st_tag = self._badge_tag("Pendente", (0.75, 0.50, 0.10, 0.28), (1, 0.85, 0.45, 1))
+        top_row.add_widget(st_tag)
+        top_row.add_widget(Widget())
+        info_col.add_widget(top_row)
+
+        desc = extension.get("description") or "Sem descrição cadastrada."
+        lbl_desc = Label(
+            text=f"{desc}  •  Por {extension.get('author', 'Usuário')}",
+            font_size="12sp",
+            color=(0.60, 0.70, 0.85, 1),
+            size_hint_y=None,
+            height=dp(20),
+            halign="left",
+            valign="middle"
+        )
+        lbl_desc.bind(size=lambda item, val: setattr(item, "text_size", val))
+        info_col.add_widget(lbl_desc)
+
+        card.add_widget(info_col)
+
+        # Ações à direita (compactas)
+        actions = BoxLayout(
+            orientation="horizontal",
+            size_hint=(None, None),
+            height=dp(38),
+            spacing=dp(8),
+            pos_hint={"center_y": 0.5}
+        )
+        total_w = dp(0)
+
+        if status == "pendente" and can_approve:
+            btn_aprov = BotaoAcao(
+                text="Aprovar",
+                icone="check-circle-outline",
+                variant="primary",
+                size_hint=(None, None),
+                size=(dp(120), dp(36)),
+                font_size="11sp"
             )
-            with card.canvas.before:
-                from kivy.graphics import Color, RoundedRectangle
-                Color(.055, .09, .15, 1)
-                background = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12)])
-            card.bind(
-                pos=lambda item, value, shape=background: setattr(shape, "pos", value),
-                size=lambda item, value, shape=background: setattr(shape, "size", value),
+            btn_aprov.bind(on_release=lambda _b, ident=extension["id"]: self.aprovar(ident))
+            actions.add_widget(btn_aprov)
+            total_w += dp(120)
+
+        if status == "aprovada":
+            btn_inst = BotaoAcao(
+                text="Instalar",
+                icone="download-outline",
+                variant="primary",
+                size_hint=(None, None),
+                size=(dp(120), dp(36)),
+                font_size="11sp"
             )
-            card.add_widget(self._label(
-                f"{extension.get('name', 'Extensão')}  •  v{extension.get('version', '?')}  •  {extension.get('status', '').capitalize()}",
-                bold=True,
-            ))
-            card.add_widget(self._label(extension.get("description") or "Sem descrição."))
-            card.add_widget(self._label(f"Enviada por {extension.get('author', 'Usuário')}"))
-            actions = BoxLayout(size_hint_y=None, height=dp(32), spacing=dp(8))
-            status = extension.get("status")
-            if status == "pendente" and can_approve:
-                actions.add_widget(self._button(
-                    "Aprovar", lambda ident=extension["id"]: self.aprovar(ident)
-                ))
-            if status == "aprovada":
-                actions.add_widget(self._button(
-                    "Instalar", lambda ident=extension["id"]: self.instalar(ident)
-                ))
-            if status == "instalada":
-                actions.add_widget(self._button(
-                    "Executar", lambda ident=extension["id"]: self.confirmar_execucao(ident)
-                ))
-            card.add_widget(actions)
-            area.add_widget(card)
+            btn_inst.bind(on_release=lambda _b, ident=extension["id"]: self.instalar(ident))
+            actions.add_widget(btn_inst)
+            total_w += dp(120)
+
+        if status == "instalada":
+            btn_exec = BotaoAcao(
+                text="Executar",
+                icone="play-outline",
+                variant="primary",
+                size_hint=(None, None),
+                size=(dp(120), dp(36)),
+                font_size="11sp"
+            )
+            btn_exec.bind(on_release=lambda _b, ident=extension["id"]: self.confirmar_execucao(ident))
+            actions.add_widget(btn_exec)
+            total_w += dp(120)
+
+        actions.width = total_w
+        card.add_widget(actions)
+        return card
+
+    def _badge_tag(self, text: str, bg_col, txt_col) -> BoxLayout:
+        from kivy.graphics import Color, RoundedRectangle
+        pill = BoxLayout(size_hint=(None, None), height=dp(22), padding=(dp(8), dp(2)))
+        with pill.canvas.before:
+            Color(*bg_col)
+            bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[dp(11)])
+        pill.bind(pos=lambda item, value, s=bg: setattr(s, "pos", value),
+                  size=lambda item, value, s=bg: setattr(s, "size", value))
+        lbl = Label(text=text, font_size="10sp", bold=True, color=txt_col, size_hint=(None, None), height=dp(18))
+        lbl.bind(texture_size=lambda item, sz: (setattr(item, "width", sz[0]), setattr(pill, "width", sz[0] + dp(16))))
+        pill.add_widget(lbl)
+        return pill
+
+    def _card_vazio(self, titulo: str, subtitulo: str, icone: str) -> BoxLayout:
+        from kivy.graphics import Color, RoundedRectangle, Line
+        box = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(110), padding=dp(16), spacing=dp(6))
+        with box.canvas.before:
+            Color(0.06, 0.10, 0.18, 0.7)
+            bg = RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(12)])
+            Color(0.18, 0.32, 0.52, 0.3)
+            b = Line(rounded_rectangle=(box.x, box.y, box.width, box.height, dp(12)), width=dp(1))
+        box.bind(pos=lambda item, val, s=bg, ln=b: (setattr(s, "pos", val), setattr(ln, "rounded_rectangle", (val[0], val[1], item.width, item.height, dp(12)))),
+                 size=lambda item, val, s=bg, ln=b: (setattr(s, "size", val), setattr(ln, "rounded_rectangle", (item.x, item.y, val[0], val[1], dp(12)))))
+        topo = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(28), spacing=dp(8))
+        topo.add_widget(IconeUI(nome=icone, size_hint=(None, None), size=(dp(24), dp(24)), font_size="20sp", color=(0.4, 0.7, 1, 0.9)))
+        topo.add_widget(Label(text=titulo, bold=True, font_size="14sp", color=(0.88, 0.93, 1, 1), halign="left", valign="middle", size_hint_x=1))
+        box.add_widget(topo)
+        lbl_sub = Label(text=subtitulo, font_size="11sp", color=(0.6, 0.7, 0.85, 0.8), halign="left", valign="middle", size_hint_y=None, height=dp(24))
+        lbl_sub.bind(size=lambda item, val: setattr(item, "text_size", val))
+        box.add_widget(lbl_sub)
+        return box
 
     def enviar_extensao(self):
         if self._app.feature_blocked_for_current_user():
@@ -206,10 +356,10 @@ class TelaExtensoes(LayoutFundo):
         label.bind(width=lambda item, width: setattr(item, "text_size", (width, None)))
         return label
 
-    def _button(self, title: str, action) -> BotaoAcao:
+    def _button(self, title: str, action, variant="primary", width=dp(130)) -> BotaoAcao:
         button = BotaoAcao(
-            text=title, variant="primary", size_hint_y=None, height=dp(42),
-            color=(1, 1, 1, 1),
+            text=title, variant=variant, size_hint=(None, None), size=(width, dp(36)),
+            color=(1, 1, 1, 1), font_size="11sp"
         )
         button.bind(on_release=lambda _button: action())
         return button

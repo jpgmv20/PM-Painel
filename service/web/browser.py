@@ -74,6 +74,7 @@ class BrowserManager:
         url: str,
         title: str = "Navegador do PM-Painel",
         app_mode: bool = False,
+        window_size: Optional[tuple[int, int]] = None,
     ) -> None:
         """Abre uma janela completa do Chrome sem tocar no perfil pessoal do usuário."""
         if self._destroyed:
@@ -94,6 +95,11 @@ class BrowserManager:
             command.append(f"--app={url}")
         else:
             command.extend(("--new-window", url))
+        if window_size is not None:
+            width, height = window_size
+            if width < 320 or height < 240:
+                raise ValueError("O tamanho da janela deve ser de pelo menos 320 × 240 pixels.")
+            command.append(f"--window-size={int(width)},{int(height)}")
         if self.prevent_login_persistence:
             command.append("--incognito")
 

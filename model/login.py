@@ -6,7 +6,7 @@ from kivy.properties import BooleanProperty, DictProperty, ListProperty, StringP
 from kivy.uix.screenmanager import SlideTransition
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.popup import Popup
-from kivy.uix.textinput import TextInput
+from kivy.graphics.texture import Texture
 from kivy.metrics import dp
 
 import model.componentes as componentes
@@ -27,6 +27,16 @@ class TelaLogin(componentes.LayoutFundo):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def criar_gradiente_fundo(self, theme="Claro"):
+        """Mantém o fundo azul original na tela de login."""
+        texture = Texture.create(size=(1, 2), colorfmt="rgba")
+        if str(theme).casefold() in {"escuro", "dark"}:
+            pixels = bytes([7, 20, 43, 255, 28, 57, 96, 255])
+        else:
+            pixels = bytes([13, 74, 161, 255, 100, 180, 240, 255])
+        texture.blit_buffer(pixels, colorfmt="rgba", bufferfmt="ubyte")
+        return texture
 
     def login_google(self):
         """Inicia o fluxo OAuth em segundo plano sem bloquear a interface."""
@@ -58,10 +68,10 @@ class TelaLogin(componentes.LayoutFundo):
     def abrir_cadastro(self):
         """Abre o cadastro livre de aluno, sem oferecer seleção de perfil privilegiado."""
         fields = [
-            componentes.CampoTexto(appearance="dark", hint_text="Nome", multiline=False, size_hint_y=None, height=dp(48)),
-            componentes.CampoTexto(appearance="dark", hint_text="E-mail", multiline=False, size_hint_y=None, height=dp(48)),
-            componentes.CampoTexto(appearance="dark", hint_text="Senha (mínimo de 8 caracteres)", password=True, multiline=False, size_hint_y=None, height=dp(48)),
-            componentes.CampoTexto(appearance="dark", hint_text="Confirmar senha", password=True, multiline=False, size_hint_y=None, height=dp(48)),
+            componentes.CampoTextoClassico(appearance="dark", hint_text="Nome", multiline=False, size_hint_y=None, height=dp(48)),
+            componentes.CampoTextoClassico(appearance="dark", hint_text="E-mail", multiline=False, size_hint_y=None, height=dp(48)),
+            componentes.CampoTextoClassico(appearance="dark", hint_text="Senha (mínimo de 8 caracteres)", password=True, multiline=False, size_hint_y=None, height=dp(48)),
+            componentes.CampoTextoClassico(appearance="dark", hint_text="Confirmar senha", password=True, multiline=False, size_hint_y=None, height=dp(48)),
         ]
         box = BoxLayout(orientation="vertical", padding=dp(16), spacing=dp(10))
         for field in fields:
@@ -90,6 +100,7 @@ class TelaLogin(componentes.LayoutFundo):
         button = componentes.BotaoAcao(
             text="Criar conta",
             variant="primary",
+            icone="",
             size_hint_y=None,
             height=dp(48),
             color=(1, 1, 1, 1),

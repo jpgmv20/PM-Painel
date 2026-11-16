@@ -155,6 +155,21 @@ class MateriasService:
             except OSError: pass
         materia.arquivos = [item for item in materia.arquivos if item.id != arquivo_id]; self._persistir()
 
+    # Aliases de compatibilidade para a interface do usuário
+    adicionar = salvar_materia
+    atualizar = salvar_materia
+    excluir = excluir_materia
+    adicionar_topico = salvar_topico
+    atualizar_topico = salvar_topico
+    adicionar_conteudo = salvar_conteudo
+    atualizar_conteudo = salvar_conteudo
+    adicionar_publicacao = salvar_publicacao
+    atualizar_publicacao = salvar_publicacao
+    adicionar_trabalho = salvar_trabalho
+    atualizar_trabalho = salvar_trabalho
+    adicionar_arquivo = adicionar_arquivo_local
+    remover_arquivo = excluir_arquivo
+
     @staticmethod
     def _substituir_ou_adicionar(items: list, novo: object) -> None:
         for index, item in enumerate(items):

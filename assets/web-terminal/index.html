@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Redes I · Terminais interativos</title>
+  <link rel="stylesheet" href="./vendor/xterm.css">
+  <link rel="stylesheet" href="./terminal.css">
+  <script defer src="./vendor/xterm.js"></script>
+  <script defer src="./vendor/addon-fit.js"></script>
+  <script defer src="./terminal.js"></script>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">&gt;_</div>
+      <div class="brand-copy">
+        <span class="eyebrow">PM-PAINEL · REDES I</span>
+        <h1>Terminais interativos</h1>
+      </div>
+      <div class="topbar-meta">
+        <span class="live-dot"></span>
+        <span>LAN isolada</span>
+      </div>
+    </header>
+
+    <section class="terminal-grid" aria-label="Consoles dos computadores da rede">
+      <article class="terminal-card" data-terminal="A">
+        <header class="terminal-heading">
+          <div class="machine-icon" aria-hidden="true">A</div>
+          <div class="machine-copy">
+            <h2>PC-A</h2>
+            <span>Debian · <code>pc-a</code></span>
+          </div>
+          <span class="connection-status connecting" data-status="A">Conectando</span>
+          <button class="clear-button" type="button" data-clear="A" title="Limpar a tela" aria-label="Limpar a tela do PC-A">Limpar</button>
+        </header>
+        <div class="terminal-host" id="terminal-a" aria-label="Terminal PC-A"></div>
+        <footer class="terminal-footer"><span>Diretório inicial</span><code>/tmp</code><span class="footer-separator">·</span><span>Sessão Bash persistente</span></footer>
+      </article>
+
+      <article class="terminal-card" data-terminal="B">
+        <header class="terminal-heading">
+          <div class="machine-icon machine-icon-b" aria-hidden="true">B</div>
+          <div class="machine-copy">
+            <h2>PC-B</h2>
+            <span>Debian · <code>pc-b</code></span>
+          </div>
+          <span class="connection-status connecting" data-status="B">Conectando</span>
+          <button class="clear-button" type="button" data-clear="B" title="Limpar a tela" aria-label="Limpar a tela do PC-B">Limpar</button>
+        </header>
+        <div class="terminal-host" id="terminal-b" aria-label="Terminal PC-B"></div>
+        <footer class="terminal-footer"><span>Diretório inicial</span><code>/tmp</code><span class="footer-separator">·</span><span>Sessão Bash persistente</span></footer>
+      </article>
+    </section>
+
+    <footer class="app-footer">
+      <span>Comandos rodam somente nos containers Debian do laboratório.</span>
+      <span class="secure-label"><span aria-hidden="true">●</span> Conexão local protegida</span>
+    </footer>
+  </main>
+</body>
+</html>

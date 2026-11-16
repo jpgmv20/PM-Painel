@@ -5,13 +5,45 @@ from __future__ import annotations
 import platform
 import socket
 import webbrowser
+from pathlib import Path
 
 from kivy.app import App
+from kivy.factory import Factory
+from kivy.metrics import dp
 from kivy.properties import BooleanProperty, StringProperty
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.dropdown import DropDown
+from kivy.uix.spinner import Spinner, SpinnerOption
 from kivy.uix.screenmanager import SlideTransition
 
 import model.componentes as componentes
+
+
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+
+
+class OpcaoSeletorConfiguracao(SpinnerOption):
+    """Opção de lista estilizada para os seletores das configurações."""
+
+
+class ListaSeletorConfiguracao(DropDown):
+    """Lista com espaçamento e altura controlados para os seletores."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("max_height", dp(280))
+        kwargs.setdefault("bar_width", dp(4))
+        super().__init__(**kwargs)
+        self.container.padding = (dp(6), dp(6))
+        self.container.spacing = dp(3)
+
+
+class SeletorConfiguracao(Spinner):
+    """Seletor visual da tela de configurações."""
+
+
+Factory.register("OpcaoSeletorConfiguracao", cls=OpcaoSeletorConfiguracao)
+Factory.register("ListaSeletorConfiguracao", cls=ListaSeletorConfiguracao)
+Factory.register("SeletorConfiguracao", cls=SeletorConfiguracao)
 
 
 class TelaConfiguracoes(componentes.LayoutFundo):
@@ -131,9 +163,23 @@ class ServicoOpcao(BoxLayout):
     titulo = StringProperty("")
     descricao = StringProperty("")
     imagem = StringProperty("")
-    simbolo = StringProperty("")
+    simbolo = StringProperty("apps")
     key = StringProperty("")
     active = BooleanProperty(False)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.bind(imagem=self._validar_imagem)
+        self._validar_imagem(self, self.imagem)
+
+    def _validar_imagem(self, _instance: object, source: str) -> None:
+        if not source:
+            return
+        image_path = Path(source)
+        if not image_path.is_absolute():
+            image_path = PROJECT_DIR / image_path
+        if not image_path.is_file():
+            self.imagem = ""
 
     def on_active(self, _instance: object, value: bool) -> None:
         if self.key:

@@ -4,6 +4,7 @@
 
     Cabecalho:
         id: cabecalho
+        gradiente_login: True
 
     BoxLayout:
         orientation: 'horizontal'
@@ -120,14 +121,14 @@
                     size_hint_y: None
                     height: self.texture_size[1]
 
-                CampoTexto:
+                CampoTextoClassico:
                     id: email_input
                     hint_text: 'E-mail'
                     multiline: False
                     size_hint_y: None
                     height: dp(48)
 
-                CampoTexto:
+                CampoTextoClassico:
                     id: password_input
                     hint_text: 'Senha'
                     password: True
@@ -138,6 +139,7 @@
                 BotaoAcao:
                     variant: 'primary'
                     text: 'Entrar com e-mail e senha'
+                    icone: ''
                     size_hint_y: None
                     height: dp(50)
                     color: 1, 1, 1, 1
@@ -146,6 +148,7 @@
                 BotaoAcao:
                     variant: 'light'
                     text: 'Criar conta de aluno'
+                    icone: ''
                     size_hint_y: None
                     height: dp(46)
                     color: .05, .20, .48, 1

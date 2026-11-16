@@ -31,6 +31,16 @@ class SettingsStore(EventDispatcher):
     show_google_drive = BooleanProperty(True)
     show_discord = BooleanProperty(False)
     show_github = BooleanProperty(True)
+    show_google_calendar = BooleanProperty(True)
+    show_google_meet = BooleanProperty(True)
+    show_google_docs = BooleanProperty(True)
+    show_google_slides = BooleanProperty(True)
+    show_google_forms = BooleanProperty(True)
+    show_google_maps = BooleanProperty(True)
+    show_google_keep = BooleanProperty(True)
+    show_canva = BooleanProperty(True)
+    show_notion = BooleanProperty(True)
+    show_trello = BooleanProperty(True)
 
     fullscreen = BooleanProperty(True)
     offline_mode = BooleanProperty(False)
@@ -52,18 +62,22 @@ class SettingsStore(EventDispatcher):
     clear_abandoned_sessions = BooleanProperty(True)
     prevent_login_persistence = BooleanProperty(True)
     maximum_session_time = StringProperty("4 horas")
+    check_docker_on_startup = BooleanProperty(True)
 
     _FIELDS = (
         "start_with_windows", "start_after_login", "minimize_to_tray",
         "confirm_before_close", "show_google", "show_youtube", "show_outlook",
         "show_git", "show_classroom", "show_teams", "show_word", "show_excel",
         "show_onedrive", "show_google_drive", "show_discord", "show_github",
+        "show_google_calendar", "show_google_meet", "show_google_docs",
+        "show_google_slides", "show_google_forms", "show_google_maps",
+        "show_google_keep", "show_canva", "show_notion", "show_trello",
         "fullscreen", "start_in_lab_mode", "block_app_close",
         "block_restricted_features", "show_computer_info", "auto_check_updates",
         "auto_download_updates", "install_updates_on_restart", "update_channel",
         "laboratory_mode", "clear_sessions_on_exit", "clear_temporary_browser",
         "clear_abandoned_sessions", "prevent_login_persistence", "maximum_session_time",
-        "offline_mode", "theme", "language",
+        "offline_mode", "theme", "language", "check_docker_on_startup",
     )
 
     def __init__(self, path: str | Path | None = None, **kwargs: Any) -> None:

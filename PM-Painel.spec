@@ -20,6 +20,8 @@ hiddenimports += collect_submodules("plugins")
 hiddenimports += collect_submodules("core")
 hiddenimports += collect_submodules("data")
 hiddenimports += collect_submodules("database")
+hiddenimports += collect_submodules("docker")
+hiddenimports += collect_submodules("websockets")
 hiddenimports += ["win32api", "win32con", "win32gui", "win32process"]
 
 
@@ -36,6 +38,7 @@ datas = [
     ("docs", "docs"),
 ]
 datas.append((str(Path(fonts_path) / "materialdesignicons-webfont.ttf"), "kivymd/fonts"))
+datas.append((str(project_dir / "docker" / "network-lab"), "docker/network-lab"))
 
 
 # ============================================================

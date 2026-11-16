@@ -2,46 +2,57 @@
 
 <TelaExtensoes>:
     orientation: 'vertical'
-    spacing: dp(10)
-    padding: dp(26), dp(16)
+    spacing: 0
+    padding: 0
 
     Cabecalho:
+        id: cabecalho
         titulo: 'Extensões'
 
     BoxLayout:
-        size_hint_y: None
-        height: dp(48)
-        spacing: dp(10)
-        BotaoAcao:
-            text: 'Painel'
-            variant: 'secondary'
-            size_hint_x: None
-            width: dp(124)
-            height: dp(44)
-            on_release: root.voltar()
-        Label:
-            id: extension_status
-            color: .79, .87, 1, 1
-            halign: 'left'
-            text_size: self.size
-        BotaoAcao:
-            text: 'Enviar extensão'
-            variant: 'primary'
-            size_hint_x: None
-            width: dp(188)
-            height: dp(44)
-            on_release: root.enviar_extensao()
+        orientation: 'vertical'
+        padding: dp(26), dp(14)
+        spacing: dp(12)
 
-    ScrollView:
-        do_scroll_x: False
-        bar_width: dp(8)
-        GridLayout:
-            id: extension_list
-            cols: 1
-            spacing: dp(10)
-            padding: dp(8)
+        BoxLayout:
             size_hint_y: None
-            height: self.minimum_height
+            height: dp(48)
+            spacing: dp(10)
+
+            BotaoAcao:
+                text: 'Painel'
+                icone: 'home-outline'
+                variant: 'secondary'
+                size_hint_x: None
+                width: dp(124)
+                height: dp(44)
+                on_release: root.voltar()
+
+            Label:
+                id: extension_status
+                color: app.theme_muted
+                halign: 'left'
+                text_size: self.size
+
+            BotaoAcao:
+                text: 'Enviar extensão'
+                icone: 'upload-outline'
+                variant: 'primary'
+                size_hint_x: None
+                width: dp(188)
+                height: dp(44)
+                on_release: root.enviar_extensao()
+
+        ScrollView:
+            do_scroll_x: False
+            bar_width: dp(8)
+            GridLayout:
+                id: extension_list
+                cols: 1
+                spacing: dp(10)
+                padding: dp(4)
+                size_hint_y: None
+                height: self.minimum_height
 
     Rodape:
         size_hint_y: None

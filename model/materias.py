@@ -133,6 +133,8 @@ class Materia:
     nome: str = ""
     descricao: str = ""
     categoria: str = "Geral"
+    imagem: str = ""
+    icone: str = "book-open-page-variant"
     criado_por_email: str = ""
     status: str = "ativa"
     topicos: list[Topico] = field(default_factory=list)

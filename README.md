@@ -13,6 +13,102 @@ O projeto está organizado em camadas:
 - `devtools/` reúne a infraestrutura do ambiente de desenvolvimento.
 - `assets/` guarda imagens, ícones e fontes.
 
+## Diagrama de classes (lista)
+
+A estrutura do projeto pode ser entendida por camadas, com herança e composição entre telas, widgets e serviços:
+
+### 1. Camada de aplicação
+
+- `MeuApp` (`main.py`): aplicação principal do KivyMD; monta as telas, inicializa serviços, gerencia tema, sessão, autoatualização e recursos do Windows.
+- `TelaInicial` (`main.py`): tela de boas-vindas que redireciona para a autenticação.
+
+### 2. Camada de telas e widgets da interface
+
+- `LayoutFundo` (`model/componentes.py`): base visual reutilizável para todas as telas; aplica fundo gradiente e adaptações de tema.
+- `MenuPerfil` (`model/componentes.py`): menu suspenso com ações de perfil, logout e saída.
+- `FotoPerfil` (`model/componentes.py`): botão/visualização de imagem do perfil do usuário.
+- `Cabecalho` (`model/componentes.py`): cabeçalho da interface com título, perfil e ações de navegação.
+- `Rodape` (`model/componentes.py`): rodapé com status de conexão e versão do app.
+- `CardMenu` (`model/componentes.py`): cartão de navegação reutilizável para menus e atalhos.
+- `BotaoHover` (`model/componentes.py`): botão com efeito hover.
+- `BotaoAcao` (`model/componentes.py`): botão de ação especial, herdado de `BotaoHover`.
+- `IconeUI` (`model/componentes.py`): ícone visual usado em componentes da interface.
+- `CampoTexto` (`model/componentes.py`): campo de entrada configurado para uso no painel.
+- `TelaLogin` (`model/login.py`): tela de autenticação com login local e Google.
+- `TelaPrincipal` (`model/home.py`): tela principal com atalhos, navegação e integração ao navegador.
+- `TelaConfiguracoes` (`model/configuracoes.py`): tela de ajustes do usuário e do sistema.
+- `ConfiguracaoOpcao` (`model/configuracoes.py`): widget de opção de configuração.
+- `ServicoOpcao` (`model/configuracoes.py`): widget de serviço/configuração relacionado.
+- `TelaMaterias` (`model/tela_materias.py`): tela de matérias e conteúdos acadêmicos.
+- `TeamCard` (`model/tela_materias.py`): card de equipe ou matéria com comportamento de botão.
+- `TelaEquipe` (`model/tela_materias.py`): extensão da tela de matérias para visão de equipe.
+- `TelaUsuarios` (`model/usuarios.py`): gestão de usuários e permissões locais.
+- `TelaExtensoes` (`model/extensoes.py`): administração e execução de extensões.
+- `TelaPerfil` (`model/perfil.py`): perfil do usuário e suas informações.
+- `TelaPraticas` (`model/praticas.py`): laboratório de práticas e simuladores.
+- `EditorCircuito` (`model/praticas.py`): editor de circuito para aulas práticas.
+- `IndicadorSinal` (`model/praticas.py`): indicador visual de sinal/estado.
+- `LaboratorioEnderecoIP` (`model/praticas_redes.py`): laboratório de redes com endereçamento IP.
+- `LaboratorioDocker` (`model/praticas_redes.py`): dois terminais xterm.js ligados a shells Bash nos containers Debian.
+
+### 3. Camada de domínio e entidades
+
+- `Conteudo` (`model/materias.py`): conteúdo didático de uma matéria.
+- `Comentario` (`model/materias.py`): comentário em publicação ou tópico.
+- `Publicacao` (`model/materias.py`): publicação acadêmica ou informativa vinculada a uma matéria.
+- `ArquivoCompartilhado` (`model/materias.py`): arquivo compartilhado dentro de uma disciplina.
+- `Trabalho` (`model/materias.py`): tarefa ou atividade acadêmica.
+- `Topico` (`model/materias.py`): tema do conteúdo pedagógico.
+- `Materia` (`model/materias.py`): entidade principal que agrega tópicos, publicações, arquivos e trabalhos.
+- `ResultadoCircuito` (`model/praticas.py`): resultado de execução do circuito simulado.
+- `SimuladorLogico` (`model/praticas.py`): lógica de simulação do ambiente prático.
+
+### 4. Camada de serviços e integrações
+
+- `SettingsStore` (`service/settings.py`): armazenamento persistente de preferências do usuário em JSON.
+- `PermissionService` (`service/permissoes.py`): controle de papéis e permissões.
+- `Papel` (`service/permissoes.py`): enumeração para perfis como aluno, professor e moderador.
+- `LocalUserStore` (`service/login/users.py`): repositório local de usuários e senhas.
+- `AuthSession` (`service/login/session.py`): sessão autenticada em memória.
+- `SessionManager` (`service/login/session.py`): gestão de autenticação e sessão offline.
+- `AuthenticationService` (`service/login/authentication.py`): caso de uso de login, logout e recuperação de sessão.
+- `GoogleAuth` (`service/login/google_auth.py`): autenticação via OAuth com Google.
+- `MateriasService` (`service/materias.py`): operações relacionadas às matérias e conteúdos acadêmicos.
+- `ExtensionsService` (`service/extensions.py`): catálogo de extensões instaláveis.
+- `InternetService` (`service/network.py`): verificação de conectividade.
+- `BrowserManager` (`service/web/browser.py`): gerenciamento de navegador com perfil descartável.
+- `TerminalWebServer` (`service/web_terminal.py`): servidor local protegido para a interface xterm.js e as sessões WebSocket dos terminais Docker.
+- `OAuthCallbackServer` (`service/web/oauth_callback.py`): servidor local para callback do OAuth.
+- `GitBashManager` (`service/git_bash.py`): abertura do terminal Git Bash com perfil temporário.
+- `DockerNetworkLab` (`service/network_lab_docker.py`): criação e encerramento do laboratório Docker de Redes I.
+- `UpdateService` (`service/updates.py`): atualização automática do painel.
+- `WindowsStartupService` (`service/windows_startup.py`): integração com inicialização do Windows.
+- `WindowsTrayService` (`service/windows_tray.py`): integração com bandeja do sistema.
+
+### 5. Camada de desenvolvimento e infraestrutura
+
+- `DevelopmentConfig` (`devtools/config.py`): configurações do ambiente de desenvolvimento.
+- `Logger` (`devtools/logger.py`): logging do projeto.
+- `EventBus` (`devtools/events.py`): sistema de eventos para execução do ambiente.
+- `CommandManager` (`devtools/commands.py`): gestão de comandos do devtools.
+- `PluginManager` (`devtools/plugins.py`): carregamento de plugins.
+- `DevelopmentConsole` (`devtools/console.py`): console de apoio ao desenvolvimento.
+- `ProjectWatcher` / `FileWatcher` (`devtools/watcher.py`): observação de alterações em arquivos.
+- `ProcessManager` (`devtools/process.py`): controle de processos auxiliares.
+- `HotReloadManager` (`devtools/hotreload.py`): recarga em tempo real.
+- `DevelopmentRunner` (`devtools/runner.py`): orquestração do ambiente de execução.
+- `Profiler` (`devtools/profiler.py`): suporte a profiling.
+- `ProjectValidator` (`devtools/validator.py`): validação de entradas e ambiente.
+- `DevelopmentState` (`devtools/state.py`): armazenamento do estado compartilhado.
+- `WidgetManager` (`devtools/widgets.py`): gestão de widgets auxiliares.
+
+### Estrutura de relacionamento de alto nível
+
+- `MeuApp` compõe `SettingsStore`, `SessionManager`, `AuthenticationService`, `BrowserManager`, `GitBashManager`, `MateriasService` e `ExtensionsService`.
+- `TelaLogin`, `TelaPrincipal`, `TelaMaterias`, `TelaConfiguracoes`, `TelaUsuarios`, `TelaExtensoes`, `TelaPerfil` e `TelaPraticas` herdam/consomem `LayoutFundo` e widgets reutilizáveis.
+- `Materia` agrega `Topico`, `Publicacao`, `ArquivoCompartilhado` e `Trabalho`.
+- `AuthSession` e `PermissionService` controlam o estado do usuário e suas permissões durante a navegação.
+
 ## Funcionalidades acadêmicas e contas
 
 - O acesso pode ser feito por conta local de aluno ou pela autenticação Google já existente. O cadastro livre cria apenas contas de aluno.
@@ -45,6 +141,25 @@ Executa o runner de desenvolvimento:
 ```bash
 python dev.py
 ```
+
+### Laboratório de Redes I com Docker
+
+A atividade inicia PC-A e PC-B em containers Debian Trixie slim, cada um com Bash, na mesma rede bridge Docker interna. Depois de iniciar a rede, **Abrir terminais interativos** abre uma janela de aplicativo do Chrome ou Edge com dois painéis xterm.js. Cada painel mantém um shell TTY próprio, com entrada, saída e redimensionamento em tempo real; os containers compartilham a sub-rede e se encontram pelos nomes `pc-a` e `pc-b`. A sessão TTY usa o mesmo contexto Docker selecionado pelo CLI. A rede Docker não publica portas nem encaminha tráfego para outras redes. A interface web e a ponte WebSocket ficam vinculadas a `127.0.0.1` e usam um token aleatório por execução.
+
+O terminal usa os arquivos locais do xterm.js empacotados em `assets/web-terminal`, sem baixar scripts ao abrir a atividade. A janela Chromium é separada da janela Kivy porque este projeto ainda não incorpora um WebView dentro da interface principal.
+
+Requisitos e uso:
+
+- Docker Desktop instalado e iniciado, usando containers Linux.
+- Google Chrome ou Microsoft Edge instalado para mostrar a interface xterm.js.
+- Dependências Python `docker` e `websockets` instaladas; `installKivy.bat` instala essas dependências junto ao Kivy.
+- Na primeira execução, é necessário acesso à internet para baixar Debian Trixie slim e instalar Bash, `iproute2`, `iputils-ping`, `dnsutils`, `traceroute`, `netcat`, `nmap`, `tcpdump`, `curl` e `mtr`.
+- Os dois endereços precisam usar a mesma sub-rede IPv4. Exemplo: `192.168.10.10/24` e `192.168.10.20/24`.
+- Use `ping -c 4 pc-b` no PC-A ou `ping -c 4 pc-a` no PC-B para confirmar a comunicação.
+- Cada console mantém um Bash interativo até fechar a janela, encerrar o laboratório ou sair do aplicativo. O diretório inicial é `/tmp`.
+- Para ver tráfego, use `timeout 10 tcpdump -ni eth0 icmp`; para sondar portas, use `nmap -sT pc-b`.
+- Os containers têm limites de CPU, memória e processos, usam filesystem somente leitura e não compartilham pastas com o computador. Arquivos em `/tmp` existem apenas durante a sessão.
+- Clique em **Encerrar laboratório** antes de sair da atividade para remover os containers e a rede. A imagem preparada permanece no Docker para o próximo uso.
 
 ### Scripts auxiliares no Windows
 
