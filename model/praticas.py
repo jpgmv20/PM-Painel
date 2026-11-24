@@ -93,16 +93,16 @@ PRACTICAS_FIXAS = (
         "titulo": "Redes I",
         "icone": "lan",
         "imagem": "",
-        "descricao": "Modelo OSI, endereçamento IPv4 e IPv6, máscaras, sub-redes e comunicação em rede local.",
+        "descricao": "Modelo OSI, roteamento, resolução DNS, endereçamento IPv4/IPv6 e comunicação em rede local.",
         "atividades": (
             {
                 "id": ATIVIDADE_REDES_OSI_IP,
-                "titulo": "Modelo OSI, Roteamento e Calculadora de IP",
+                "titulo": "Modelo OSI, Roteamento, DNS e Calculadora de IP",
                 "icone": "ip-network",
                 "imagem": "",
                 "descricao": (
-                    "Bancada prática de encapsulamento OSI (PDU), cálculo bitwise AND de sub-redes, "
-                    "teste prático de roteamento e calculadora CIDR IPv4/IPv6."
+                    "HUD interativo e animações passo a passo (Play, Voltar, Seguir e Pular) de encapsulamento OSI, "
+                    "cálculo bitwise AND de rotas, resolução DNS e calculadora CIDR IPv4/IPv6."
                 ),
                 "nivel": "Iniciante",
                 "tempo": "15 a 25 min",

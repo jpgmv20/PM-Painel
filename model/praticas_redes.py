@@ -1,15 +1,16 @@
-"""Laboratórios interativos e práticos de Redes I e Modelo OSI com integração Docker."""
+"""Laboratórios interativos e práticos de Redes I, Modelo OSI, Roteamento e DNS com integração Docker."""
 from __future__ import annotations
 
 import binascii
 import ipaddress
 import random
+import re
 import threading
 from functools import partial
 
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.graphics import Color, RoundedRectangle, Line, Ellipse
+from kivy.graphics import Color, Line, RoundedRectangle
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
@@ -18,122 +19,100 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 
 from model.componentes import BotaoAcao, CampoTexto, IconeUI
-from model.tema_praticas import aplicar_tema_arvore, paleta_praticas, registrar_cor_texto, registrar_fundo, tema_escuro
+from model.redes_hud import (
+    DrawerDumpBruto,
+    PlayerPassoAPasso,
+    PalcoAnimadoDNS,
+    PalcoAnimadoOSI,
+    PalcoAnimadoRoteamento,
+    construir_visualizador_bits_ipv4,
+    criar_botao,
+    criar_card,
+    criar_chip_dado,
+    criar_kpi_tile,
+    criar_label,
+    criar_pill,
+)
+from model.tema_praticas import (
+    aplicar_tema_arvore,
+    paleta_praticas,
+    registrar_cor_texto,
+    registrar_fundo,
+    tema_escuro,
+)
 from service.docker_service import DockerService
 from service.network_lab_docker import DockerNetworkLab
 
 
-def _label(text: str, *, size="12sp", color=None, bold=False, height=dp(28), valign="middle", halign="left", auto_height=False):
-    if color is None:
-        color = paleta_praticas()["text"]
-    item = Label(text=text, size_hint_y=None, height=height, color=color, bold=bold,
-                 font_size=size, halign=halign, valign=valign)
-    registrar_cor_texto(item, color)
-    item.bind(width=lambda widget, value: setattr(widget, "text_size", (max(1, value), None)))
-    if auto_height:
-        item.bind(texture_size=lambda widget, val: setattr(widget, "height", max(height, val[1] + dp(8))))
-    return item
-
-
-def _badge_pill(texto: str, bg_color, text_color, icone: str | None = None, height=dp(24), fixed_width=None):
-    pill = BoxLayout(orientation="horizontal", size_hint=(None, None), height=height,
-                     spacing=dp(5), padding=(dp(8), dp(2)))
-    with pill.canvas.before:
-        fill = Color(*bg_color)
-        bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[height / 2])
-    pill.bind(pos=lambda item, value: setattr(bg, "pos", value),
-              size=lambda item, value: setattr(bg, "size", value))
-    if icone:
-        pill.add_widget(IconeUI(nome=icone, size_hint=(None, None), size=(dp(14), height),
-                                font_size=dp(13), color=text_color))
-
-    lbl = Label(text=texto, color=text_color, bold=True, font_size="10sp",
-                size_hint=(None, None), height=height)
-
-    if fixed_width is not None:
-        pill.width = fixed_width
-        lbl.size_hint_x = 1
-        lbl.halign = "center"
-        lbl.valign = "middle"
-        lbl.bind(size=lambda item, val: setattr(item, "text_size", val))
-    else:
-        def _on_texture_size(instance, value):
-            lbl.width = value[0]
-            icon_w = dp(19) if icone else dp(0)
-            pill.width = value[0] + dp(18) + icon_w
-
-        lbl.bind(texture_size=_on_texture_size)
-        icon_w = dp(19) if icone else dp(0)
-        approx_w = max(dp(28), len(texto) * dp(7) + dp(18) + icon_w)
-        pill.width = approx_w
-        lbl.width = max(dp(10), len(texto) * dp(7))
-
-    pill.add_widget(lbl)
-    return pill
-
-
-def _card(*, padding=dp(14), spacing=dp(8), elevated=False):
+def _bloco_pdu(titulo: str, subtitulo: str, cor_titulo, height=dp(52), destaque: bool = False):
+    """Bloco proporcional representando um cabeçalho/seção dentro do Frame Ethernet."""
     colors = paleta_praticas()
-    item = GridLayout(cols=1, padding=padding, spacing=spacing, size_hint_y=None)
-    card_bg = colors["card_elevated"] if elevated else colors["card"]
-    with item.canvas.before:
-        fill = Color(*card_bg)
-        bg = RoundedRectangle(pos=item.pos, size=item.size, radius=[dp(12)])
-        border_col = Color(*colors["border"])
-        border = Line(rounded_rectangle=(item.x, item.y, item.width, item.height, dp(12)), width=dp(1))
-    registrar_fundo(item, fill, "card_elevated" if elevated else "card")
-    item.bind(pos=lambda widget, value: (setattr(bg, "pos", value),
-                                         setattr(border, "rounded_rectangle", (value[0], value[1], widget.width, widget.height, dp(12)))),
-              size=lambda widget, value: (setattr(bg, "size", value),
-                                          setattr(border, "rounded_rectangle", (widget.x, widget.y, value[0], value[1], dp(12)))))
-    item.bind(minimum_height=item.setter("height"))
-    return item
-
-
-def _bloco_pdu(titulo: str, subtitulo: str, cor_titulo, height=dp(52)):
-    colors = paleta_praticas()
-    bloco = BoxLayout(orientation="vertical", size_hint_y=None, height=height,
-                      padding=(dp(4), dp(4)), spacing=dp(1))
+    bloco = BoxLayout(
+        orientation="vertical",
+        size_hint_y=None,
+        height=height,
+        padding=(dp(6), dp(4)),
+        spacing=dp(1),
+    )
     with bloco.canvas.before:
-        fill = Color(*colors["card"])
+        fill = Color(*colors["card_elevated" if destaque else "card"])
         bg = RoundedRectangle(pos=bloco.pos, size=bloco.size, radius=[dp(8)])
-        Color(*colors["border"])
-        border = Line(rounded_rectangle=(bloco.x, bloco.y, bloco.width, bloco.height, dp(8)), width=dp(1))
-    bloco.bind(pos=lambda item, value: (setattr(bg, "pos", value),
-                                        setattr(border, "rounded_rectangle", (value[0], value[1], item.width, item.height, dp(8)))),
-               size=lambda item, value: (setattr(bg, "size", value),
-                                         setattr(border, "rounded_rectangle", (item.x, item.y, value[0], value[1], dp(8)))))
+        bd_col = Color(*(cor_titulo if destaque else colors["border"]))
+        border = Line(
+            rounded_rectangle=(bloco.x, bloco.y, bloco.width, bloco.height, dp(8)),
+            width=dp(1.6 if destaque else 1.0),
+        )
+    registrar_fundo(bloco, fill, "card_elevated" if destaque else "card")
+    bloco.bind(
+        pos=lambda item, value, s=bg, b=border: (
+            setattr(s, "pos", value),
+            setattr(b, "rounded_rectangle", (value[0], value[1], item.width, item.height, dp(8))),
+        ),
+        size=lambda item, value, s=bg, b=border: (
+            setattr(s, "size", value),
+            setattr(b, "rounded_rectangle", (item.x, item.y, value[0], value[1], dp(8))),
+        ),
+    )
 
-    lbl_top = Label(text=titulo, bold=True, font_size="9sp", color=cor_titulo,
-                    halign="center", valign="middle", size_hint=(1, 0.55))
+    lbl_top = Label(
+        text=titulo,
+        bold=True,
+        font_size="9.5sp",
+        color=cor_titulo,
+        halign="center",
+        valign="middle",
+        size_hint=(1, 0.55),
+    )
     lbl_top.bind(size=lambda item, val: setattr(item, "text_size", val))
 
-    lbl_sub = Label(text=subtitulo, font_size="8sp", color=colors["muted"],
-                    halign="center", valign="middle", size_hint=(1, 0.45))
+    lbl_sub = Label(
+        text=subtitulo,
+        font_size="8.5sp",
+        color=colors["muted"],
+        halign="center",
+        valign="middle",
+        size_hint=(1, 0.45),
+    )
     lbl_sub.bind(size=lambda item, val: setattr(item, "text_size", val))
 
     bloco.add_widget(lbl_top)
     bloco.add_widget(lbl_sub)
+    bloco._bd_col = bd_col
+    bloco._cor_titulo = cor_titulo
     return bloco
 
 
-def _button(text: str, action, *, variant="primary", height=dp(38), font_size="11sp", icone=None):
-    item = BotaoAcao(text=text, variant=variant, size_hint_y=None, height=height,
-                     color=(1, 1, 1, 1), bold=True, font_size=font_size,
-                     padding=(dp(10), dp(6)))
-    if icone:
-        item.icone = icone
-        item.icon_position = "left"
-    item.bind(on_release=lambda *_args: action())
-    return item
-
-
 def _campo(rotulo: str, dica: str, *, appearance="light", multiline=False, height=dp(38)):
-    wrapper = BoxLayout(orientation="vertical", spacing=dp(3), size_hint_y=None,
-                        height=height + dp(23))
-    wrapper.add_widget(_label(rotulo, size="10sp", color=paleta_praticas()["muted"], bold=True, height=dp(18)))
-    wrapper.input = CampoTexto(hint_text=dica, appearance="dark" if tema_escuro() else appearance, multiline=multiline,
-                               size_hint_y=None, height=height, font_size="11sp")
+    wrapper = BoxLayout(orientation="vertical", spacing=dp(3), size_hint_y=None, height=height + dp(23))
+    wrapper.add_widget(criar_label(rotulo, size="10sp", color=paleta_praticas()["muted"], bold=True, height=dp(18), role="muted"))
+    wrapper.input = CampoTexto(
+        hint_text=dica,
+        appearance="dark" if tema_escuro() else appearance,
+        multiline=multiline,
+        size_hint_y=None,
+        height=height,
+        font_size="11sp",
+    )
     wrapper.input._tema_aparencia = True
     wrapper.add_widget(wrapper.input)
     return wrapper
@@ -141,32 +120,47 @@ def _campo(rotulo: str, dica: str, *, appearance="light", multiline=False, heigh
 
 def _header(voltar, titulo: str, subtitulo: str, icone: str = "lan"):
     colors = paleta_praticas()
-    area = BoxLayout(orientation="vertical", spacing=dp(4), size_hint_y=None, height=dp(72))
+    area = BoxLayout(orientation="vertical", spacing=dp(4), size_hint_y=None, height=dp(70))
     bar = BoxLayout(size_hint_y=None, height=dp(38), spacing=dp(10))
 
-    btn_voltar = _button("Voltar para Redes I", voltar, variant="secondary", height=dp(36), icone="arrow-left")
-    btn_voltar.size_hint_x = None
-    btn_voltar.width = dp(175)
+    btn_voltar = criar_botao(
+        "Voltar para Redes I", voltar, variant="secondary", height=dp(36), icone="arrow-left", width=dp(178)
+    )
     bar.add_widget(btn_voltar)
 
-    bar.add_widget(IconeUI(nome=icone, size_hint=(None, None), size=(dp(30), dp(36)),
-                           font_size=dp(24), color=colors["accent"]))
-    lbl_title = _label(titulo, size="17sp", color=colors["text"], bold=True, height=dp(36))
+    bar.add_widget(
+        IconeUI(nome=icone, size_hint=(None, None), size=(dp(30), dp(36)), font_size=dp(24), color=colors["accent"])
+    )
+    lbl_title = criar_label(titulo, size="17sp", color=colors["text"], bold=True, height=dp(36), role="text")
     lbl_title.size_hint_x = 1
     bar.add_widget(lbl_title)
 
-    badge = _badge_pill("LABORATÓRIO PRÁTICO", colors["tag_bg"], colors["accent"], "flask-outline", height=dp(26))
+    badge = criar_pill("LABORATÓRIO PRÁTICO", colors["tag_bg"], colors["accent"], "flask-outline", height=dp(26))
     bar.add_widget(badge)
 
     area.add_widget(bar)
-    desc_label = _label(subtitulo, size="11sp", color=colors["muted"], height=dp(22))
+    desc_label = criar_label(subtitulo, size="11sp", color=colors["muted"], height=dp(22), role="muted")
     area.add_widget(desc_label)
     return area
 
 
+class _BotaoCamadaInterativo(BoxLayout):
+    """Linha HUD interativa para inspecionar uma camada OSI e saltar o vídeo para ela."""
+
+    def __init__(self, on_select, **kwargs):
+        super().__init__(**kwargs)
+        self._on_select = on_select
+
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos) and callable(self._on_select):
+            self._on_select()
+            return True
+        return super().on_touch_down(touch)
+
+
 class LaboratorioEnderecoIP(BoxLayout):
-    """Laboratório interativo completo de Redes I: Simulador de Encapsulamento OSI,
-    Bancada de Roteamento Bitwise AND e Calculadora CIDR com execução real via Docker.
+    """Laboratório interativo de Redes I com HUD limpo e animações passo a passo:
+    Encapsulamento OSI, Roteamento Bitwise AND, Resolução DNS e Calculadora CIDR.
     """
 
     PRESETS_PACOTE = {
@@ -203,9 +197,9 @@ class LaboratorioEnderecoIP(BoxLayout):
             "porta_orig": "53100",
             "porta_dest": "53",
             "ip_orig": "192.168.10.10",
-            "ip_dest": "192.168.10.1",
+            "ip_dest": "192.168.10.20",
             "mac_orig": "02:42:C0:A8:0A:0A",
-            "mac_dest": "02:42:C0:A8:0A:01",
+            "mac_dest": "02:42:C0:A8:0A:14",
             "payload": "Standard query 0x1A2B A pm-painel.local",
             "descricao": "Consulta de resolução de nomes rápida e sem conexão usando datagrama UDP.",
         },
@@ -237,50 +231,57 @@ class LaboratorioEnderecoIP(BoxLayout):
         },
     }
 
+    PRESETS_DNS = (
+        ("pm-painel.local", "A"),
+        ("www.google.com", "A"),
+        ("mail.empresa.com.br", "MX"),
+        ("cdn.app.io", "CNAME"),
+        ("pc-b.redes.lab", "AAAA"),
+    )
+
     def __init__(self, on_voltar, **kwargs):
         super().__init__(orientation="vertical", spacing=dp(8), **kwargs)
         self.on_voltar = on_voltar
-        self._aba_ativa = "osi"  # 'osi', 'roteamento', 'calculadora'
+        self._aba_ativa = "osi"  # 'osi', 'roteamento', 'dns', 'calculadora'
 
-        # Estado da simulação OSI e Docker
         self._preset_atual = "http"
+        self._dns_dominio_atual = "pm-painel.local"
+        self._dns_tipo_atual = "A"
+        self._dns_autoplay_pendente = False
+
         self.docker_service = DockerService()
         self.docker_lab = DockerNetworkLab()
         self._docker_ativo = False
         self._lab_pronto = False
         self._iniciando_docker = False
-        self._executando_experimento = False
-        self._dados_experimento = {}
         self._macs_reais = {"A": "02:42:C0:A8:0A:0A", "B": "02:42:C0:A8:0A:14"}
+        self._ips_reais = {"A": "192.168.10.10", "B": "192.168.10.20"}
+        self._dados_experimento_osi: dict = {}
+        self._ultimo_ping_simulacao: dict = {}
 
-        # Cabeçalho
         self.add_widget(_header(
             self.on_voltar,
             "Bancada Prática de Redes I & Modelo OSI",
-            "Simulação interativa e execução real em containers Debian: encapsulamento OSI, cálculo bitwise AND e analisador CIDR.",
-            icone="lan-connect"
+            "Visualização HUD sem poluição visual + animações passo a passo de Modelo OSI, Roteamento, DNS e CIDR.",
+            icone="lan-connect",
         ))
 
-        # Barra de status e conectividade do Docker Engine
         self._barra_docker = BoxLayout(size_hint_y=None, height=dp(30), spacing=dp(8))
         self.add_widget(self._barra_docker)
         self._atualizar_barra_docker()
 
-        # Barra de abas
         self._barra_abas = BoxLayout(size_hint_y=None, height=dp(38), spacing=dp(8))
         self.add_widget(self._barra_abas)
 
-        # Contêiner de conteúdo dinâmico
         self._area_conteudo = BoxLayout(orientation="vertical", size_hint=(1, 1))
         self.add_widget(self._area_conteudo)
 
         self._atualizar_abas()
-
-        # Inicia verificação do Docker e inicialização de background
         threading.Thread(target=self._verificar_docker_background, daemon=True).start()
 
     def aplicar_tema(self):
         aplicar_tema_arvore(self)
+        self._atualizar_abas()
 
     def _verificar_docker_background(self):
         try:
@@ -293,12 +294,14 @@ class LaboratorioEnderecoIP(BoxLayout):
                 self._lab_pronto = self.docker_lab.esta_pronto()
                 if self._lab_pronto:
                     self._macs_reais = self.docker_lab.obter_macs()
+                    self._ips_reais = self.docker_lab.obter_ips()
                     for p in self.PRESETS_PACOTE.values():
                         p["mac_orig"] = self._macs_reais.get("A", "02:42:C0:A8:0A:0A")
                         p["mac_dest"] = self._macs_reais.get("B", "02:42:C0:A8:0A:14")
+                        p["ip_orig"] = self._ips_reais.get("A", "192.168.10.10")
+                        p["ip_dest"] = self._ips_reais.get("B", "192.168.10.20")
             Clock.schedule_once(lambda _dt: self._atualizar_barra_docker(), 0)
-            if self._aba_ativa == "osi":
-                Clock.schedule_once(lambda _dt: self._atualizar_abas(), 0)
+            Clock.schedule_once(lambda _dt: self._atualizar_abas(), 0)
         except Exception:
             self._docker_ativo = False
             self._lab_pronto = False
@@ -309,6 +312,7 @@ class LaboratorioEnderecoIP(BoxLayout):
             return
         self._iniciando_docker = True
         self._atualizar_barra_docker()
+
         def worker():
             sucesso, _msg = self.docker_service.start_docker_service(timeout=60)
             self._iniciando_docker = False
@@ -316,34 +320,48 @@ class LaboratorioEnderecoIP(BoxLayout):
                 self._verificar_docker_background()
             else:
                 Clock.schedule_once(lambda _dt: self._atualizar_barra_docker(), 0)
+
         threading.Thread(target=worker, daemon=True).start()
 
     def _atualizar_barra_docker(self):
         colors = paleta_praticas()
         self._barra_docker.clear_widgets()
         if self._lab_pronto:
-            badge_lab = _badge_pill("DOCKER ENGINE REAL: ATIVO", colors["success_bg"], colors["success"], "docker", height=dp(26))
-            badge_net = _badge_pill("LAN BRIDGE: 192.168.10.0/24", colors["tag_bg"], colors["accent"], "lan-connect", height=dp(26))
             mac_a_curto = self._macs_reais.get("A", "PC-A")[-8:]
             mac_b_curto = self._macs_reais.get("B", "PC-B")[-8:]
-            badge_pcs = _badge_pill(f"PC-A ({mac_a_curto}) ↔ PC-B ({mac_b_curto})", colors["tag_bg"], colors["muted"], "devices", height=dp(26))
-            badge_live = _badge_pill("DADOS REAIS EM TEMPO REAL", colors["tag_bg"], colors["primary"], "check-decagram", height=dp(26))
-            self._barra_docker.add_widget(badge_lab)
-            self._barra_docker.add_widget(badge_net)
-            self._barra_docker.add_widget(badge_pcs)
-            self._barra_docker.add_widget(badge_live)
+            self._barra_docker.add_widget(
+                criar_pill("DOCKER ENGINE REAL: ATIVO", colors["success_bg"], colors["success"], "docker", height=dp(26))
+            )
+            self._barra_docker.add_widget(
+                criar_pill("LAN BRIDGE: 192.168.10.0/24", colors["tag_bg"], colors["accent"], "lan-connect", height=dp(26))
+            )
+            self._barra_docker.add_widget(
+                criar_pill(f"PC-A ({mac_a_curto}) ↔ PC-B ({mac_b_curto})", colors["tag_bg"], colors["muted"], "lan", height=dp(26))
+            )
+            self._barra_docker.add_widget(
+                criar_pill("DADOS REAIS + ANIMAÇÕES", colors["tag_bg"], colors["primary"], "play", height=dp(26))
+            )
         elif self._iniciando_docker:
-            badge_iniciando = _badge_pill("INICIANDO DOCKER DESKTOP... AGUARDE", colors["tag_bg"], colors["warning"], "loading", height=dp(26))
-            self._barra_docker.add_widget(badge_iniciando)
+            self._barra_docker.add_widget(
+                criar_pill("INICIANDO DOCKER DESKTOP... AGUARDE", colors["tag_bg"], colors["warning"], "refresh", height=dp(26))
+            )
         elif self._docker_ativo:
-            badge_starting = _badge_pill("INICIALIZANDO CONTAINERS DEBIAN EM BACKGROUND...", colors["tag_bg"], colors["warning"], "loading", height=dp(26))
-            self._barra_docker.add_widget(badge_starting)
+            self._barra_docker.add_widget(
+                criar_pill("PREPARANDO CONTAINERS DEBIAN EM BACKGROUND...", colors["tag_bg"], colors["warning"], "refresh", height=dp(26))
+            )
         else:
-            badge_offline = _badge_pill("MODO SIMULAÇÃO LOCAL (DOCKER OFFLINE)", colors["tag_bg"], colors["muted"], "help-circle-outline", height=dp(26))
-            btn_start = _button("Iniciar Docker Desktop para Dados Reais", self._iniciar_docker_desktop, variant="secondary", height=dp(26), font_size="9sp", icone="docker")
-            btn_start.size_hint_x = None
-            btn_start.width = dp(260)
-            self._barra_docker.add_widget(badge_offline)
+            self._barra_docker.add_widget(
+                criar_pill("MODO SIMULAÇÃO LOCAL (DOCKER OFFLINE)", colors["tag_bg"], colors["muted"], "layers-outline", height=dp(26))
+            )
+            btn_start = criar_botao(
+                "Iniciar Docker Desktop para Dados Reais",
+                self._iniciar_docker_desktop,
+                variant="secondary",
+                height=dp(26),
+                font_size="9.5sp",
+                icone="docker",
+                width=dp(270),
+            )
             self._barra_docker.add_widget(btn_start)
 
     def _trocar_aba(self, nova_aba: str):
@@ -352,23 +370,22 @@ class LaboratorioEnderecoIP(BoxLayout):
             self._atualizar_abas()
 
     def _atualizar_abas(self):
-        colors = paleta_praticas()
         self._barra_abas.clear_widgets()
-
         abas = (
             ("osi", "Encapsulamento OSI", "package-variant-closed"),
             ("roteamento", "Roteamento & Máscaras", "routes"),
+            ("dns", "Resolução DNS", "dns"),
             ("calculadora", "Calculadora CIDR & IP", "calculator-variant"),
         )
         for chave, titulo, icone in abas:
             ativa = self._aba_ativa == chave
-            btn = _button(
+            btn = criar_botao(
                 titulo,
                 partial(self._trocar_aba, chave),
                 variant="primary" if ativa else "secondary",
                 height=dp(36),
                 icone=icone,
-                font_size="11sp"
+                font_size="11sp",
             )
             self._barra_abas.add_widget(btn)
 
@@ -377,12 +394,220 @@ class LaboratorioEnderecoIP(BoxLayout):
             self._area_conteudo.add_widget(self._montar_tela_osi())
         elif self._aba_ativa == "roteamento":
             self._area_conteudo.add_widget(self._montar_tela_roteamento())
+        elif self._aba_ativa == "dns":
+            self._area_conteudo.add_widget(self._montar_tela_dns())
         elif self._aba_ativa == "calculadora":
             self._area_conteudo.add_widget(self._montar_tela_calculadora())
 
     # =========================================================================
-    # ABA 1: SIMULADOR DE ENCAPSULAMENTO E PILHA OSI (PDU INSPECTOR)
+    # ABA 1: SIMULADOR ANIMADO DE ENCAPSULAMENTO OSI (HUD + VÍDEO PASSO A PASSO)
     # =========================================================================
+
+    def _passos_osi(self, preset: dict, dados_reais: dict | None = None) -> list[dict]:
+        proto_l4 = preset["transporte"]
+        proto_num = 6 if proto_l4 == "TCP" else (17 if proto_l4 == "UDP" else 1)
+        payload_curto = preset["payload"].replace("\r\n", " ")[:48]
+        utf8_hex = binascii.hexlify(preset["payload"][:10].encode()).decode()
+        bits_prev = "".join(f"{b:08b} " for b in preset["payload"][:4].encode()).strip()
+
+        ip_o = (dados_reais or {}).get("ip_orig") or preset["ip_orig"]
+        ip_d = (dados_reais or {}).get("ip_dest") or preset["ip_dest"]
+        mac_o = (dados_reais or {}).get("mac_orig") or preset["mac_orig"]
+        mac_d = (dados_reais or {}).get("mac_dest") or preset["mac_dest"]
+        p_dest = (dados_reais or {}).get("porta_dest") or preset["porta_dest"]
+        status_final = (dados_reais or {}).get("status") or ("200 OK / Recebido" if proto_l4 != "ICMP" else "Echo Reply OK")
+        rtt_val = (dados_reais or {}).get("rtt") or "0.14 ms"
+        detalhe_final = (dados_reais or {}).get("detalhes") or (
+            f"Processo {preset['app_proto']} validou a entrega na porta {p_dest} com sucesso."
+        )
+        cripto_txt = "TLS 1.3 (AES-GCM)" if "TLS" in preset["payload"] else "Texto Claro (UTF-8)"
+
+        return [
+            {
+                "curto": "1. C7-C5 App",
+                "badge": "PASSO 1/8 • CAMADAS 7, 6 e 5 (PC-A)",
+                "titulo": f"Geração de Dados ({preset['app_proto']}), Apresentação e Sessão",
+                "resumo": (
+                    f"No transmissor PC-A, a aplicação gera o payload '{payload_curto}'. "
+                    f"A Camada 6 aplica codificação {cripto_txt} e a Camada 5 abre o canal Full-Duplex (#48291)."
+                ),
+                "cor": "success",
+                "dados": [
+                    ("Protocolo L7", preset["app_proto"], "success"),
+                    ("Codificação C6", f"{utf8_hex}...", "info"),
+                    ("Sessão C5", "#48291 Full-Duplex", "accent"),
+                ],
+                "anim": {
+                    "lado": "A",
+                    "camada": 7,
+                    "acao": "C7-C5 • CRIANDO DADOS NA ORIGEM",
+                    "pkt_label": "Dados L7",
+                    "pdu_blocos": [("DADOS APP", "success")],
+                    "wire_info": "Camadas superiores preparando payload antes do transporte",
+                },
+            },
+            {
+                "curto": "2. C4 Transp",
+                "badge": "PASSO 2/8 • CAMADA 4 TRANSPORTE (PC-A)",
+                "titulo": f"Segmentação {proto_l4} e Endereçamento por Portas",
+                "resumo": (
+                    f"A Camada 4 encapsula os dados adicionando cabeçalho {proto_l4}. "
+                    f"Define Porta Origem {preset['porta_orig']} -> Destino {p_dest} e calcula o Checksum de integridade."
+                ),
+                "cor": "warning",
+                "dados": [
+                    ("Transporte", proto_l4, "warning"),
+                    ("Portas", f"{preset['porta_orig']} ➔ {p_dest}", "accent"),
+                    ("Integridade", "Checksum L4 OK", "success"),
+                ],
+                "anim": {
+                    "lado": "A",
+                    "camada": 4,
+                    "acao": f"C4 • ANEXANDO CABEÇALHO {proto_l4}",
+                    "pkt_label": "Segmento L4",
+                    "pdu_blocos": [(proto_l4, "warning"), ("DADOS", "success")],
+                    "wire_info": f"PDU agora chamada Segmento/Datagrama ({proto_l4})",
+                },
+            },
+            {
+                "curto": "3. C3 Rede",
+                "badge": "PASSO 3/8 • CAMADA 3 REDE (PC-A)",
+                "titulo": "Empacotamento IPv4 e Atribuição de TTL",
+                "resumo": (
+                    f"A Camada 3 encapsula o segmento em um Pacote IPv4 de {ip_o} para {ip_d}, "
+                    f"define TTL=64 (limite de saltos) e marca Protocolo L4 = {proto_num}."
+                ),
+                "cor": "primary",
+                "dados": [
+                    ("IPv4 Origem", ip_o, "primary"),
+                    ("IPv4 Destino", ip_d, "accent"),
+                    ("TTL / Proto", f"TTL 64 • Proto {proto_num}", "info"),
+                ],
+                "anim": {
+                    "lado": "A",
+                    "camada": 3,
+                    "acao": "C3 • ADICIONANDO CABEÇALHO IPv4",
+                    "pkt_label": "Pacote IP",
+                    "pdu_blocos": [("IPv4", "primary"), (proto_l4, "warning"), ("DADOS", "success")],
+                    "wire_info": f"Roteamento lógico: {ip_o} ➔ {ip_d}",
+                },
+            },
+            {
+                "curto": "4. C2 Enlace",
+                "badge": "PASSO 4/8 • CAMADA 2 ENLACE (PC-A)",
+                "titulo": "Montagem do Quadro Ethernet II e Trailer CRC-32",
+                "resumo": (
+                    f"A Camada 2 adiciona os endereços físicos MAC ({mac_o[-8:]} ➔ {mac_d[-8:]}), "
+                    "EtherType 0x0800 (IPv4) e calcula o trailer FCS CRC-32 de 4 bytes ao final do quadro."
+                ),
+                "cor": "accent",
+                "dados": [
+                    ("MAC Origem", mac_o, "accent"),
+                    ("MAC Destino", mac_d, "accent"),
+                    ("Frame Check", "0x0800 + CRC-32", "danger"),
+                ],
+                "anim": {
+                    "lado": "A",
+                    "camada": 2,
+                    "acao": "C2 • MONTANDO QUADRO ETHERNET II",
+                    "pkt_label": "Quadro L2",
+                    "pdu_blocos": [("MAC", "accent"), ("IP", "primary"), (proto_l4, "warning"), ("DADOS", "success"), ("FCS", "danger")],
+                    "wire_info": "Quadro pronto com cabeçalho MAC + trailer CRC-32",
+                },
+            },
+            {
+                "curto": "5. C1 Fio",
+                "badge": "PASSO 5/8 • CAMADA 1 FÍSICA (MEIO DE TRANSMISSÃO)",
+                "titulo": "Modulação em Fluxo de Bits e Travessia até PC-B",
+                "resumo": (
+                    f"A placa de rede converte o quadro completo em pulsos binários ({bits_prev}...) "
+                    "e transmite pelo meio físico (bridge Ethernet virtual entre os containers)."
+                ),
+                "cor": "danger",
+                "dados": [
+                    ("Fluxo Binário", f"{bits_prev}...", "danger"),
+                    ("Meio Físico", "eth0 • Bridge LAN", "accent"),
+                    ("Direção", "PC-A ➔ PC-B", "success"),
+                ],
+                "anim": {
+                    "lado": "wire",
+                    "camada": 1,
+                    "acao": "C1 • TRANSMITINDO BITS NO CABO",
+                    "pkt_label": "010011...",
+                    "pdu_blocos": [("BITS 0/1 NO MEIO FÍSICO (PREÂMBULO + QUADRO)", "danger")],
+                    "wire_info": f"Pulsos binários atravessando a bridge: {bits_prev}",
+                },
+            },
+            {
+                "curto": "6. RX C2",
+                "badge": "PASSO 6/8 • DESENCAPSULAMENTO ENLACE (PC-B)",
+                "titulo": "Validação de MAC Destino e CRC-32 em PC-B",
+                "resumo": (
+                    f"A interface eth0 de PC-B detecta o preâmbulo, confirma seu MAC ({mac_d[-8:]}), "
+                    "valida o CRC-32 sem erros e remove o cabeçalho Ethernet II entregando o Pacote IP à Camada 3."
+                ),
+                "cor": "accent",
+                "dados": [
+                    ("MAC Validado", mac_d, "success"),
+                    ("CRC-32", "Válido (0 erros)", "success"),
+                    ("Ação C2", "Remove Header MAC", "accent"),
+                ],
+                "anim": {
+                    "lado": "B",
+                    "camada": 2,
+                    "acao": "PC-B (C2) • VALIDANDO MAC E CRC-32",
+                    "pkt_label": "Remove L2",
+                    "pdu_blocos": [("IPv4", "primary"), (proto_l4, "warning"), ("DADOS", "success")],
+                    "wire_info": "Quadro Ethernet II desencapsulado em PC-B",
+                },
+            },
+            {
+                "curto": "7. RX C3",
+                "badge": "PASSO 7/8 • DESENCAPSULAMENTO REDE (PC-B)",
+                "titulo": "Conferência de IPv4 Destino e Decréscimo de TTL",
+                "resumo": (
+                    f"O kernel de PC-B verifica o IP destino {ip_d}, decrementa o TTL (64 -> 63) "
+                    f"e despacha o segmento para o protocolo {proto_l4} na Camada 4."
+                ),
+                "cor": "primary",
+                "dados": [
+                    ("IP Destino", f"{ip_d} OK", "success"),
+                    ("TTL / Proto", f"63 • L4={proto_num}", "info"),
+                    ("Ação C3", "Remove Header IP", "primary"),
+                ],
+                "anim": {
+                    "lado": "B",
+                    "camada": 3,
+                    "acao": "PC-B (C3) • VALIDANDO IP E TTL",
+                    "pkt_label": "Remove IP",
+                    "pdu_blocos": [(proto_l4, "warning"), ("DADOS", "success")],
+                    "wire_info": "Cabeçalho IPv4 removido; segmento segue para L4",
+                },
+            },
+            {
+                "curto": "8. RX OK!",
+                "badge": "PASSO 8/8 • ENTREGA FINAL C4 -> C7 (PC-B)",
+                "titulo": f"Entrega Concluída: {status_final}",
+                "resumo": (
+                    f"A Camada 4 entrega na porta {p_dest} ({proto_l4}) e as camadas superiores (C5-C7) "
+                    f"processam a requisição. {detalhe_final}"
+                ),
+                "cor": "success",
+                "dados": [
+                    ("Resultado", status_final, "success"),
+                    ("Porta / Proto", f"{proto_l4} :{p_dest}", "accent"),
+                    ("Latência RTT", rtt_val, "primary"),
+                ],
+                "anim": {
+                    "lado": "B",
+                    "camada": 7,
+                    "acao": f"C7 • ENTREGUE COM SUCESSO ({status_final})",
+                    "pkt_label": "Entregue OK",
+                    "pdu_blocos": [(f"PAYLOAD {preset['app_proto']} ENTREGUE", "success")],
+                    "wire_info": f"Comunicação concluída em {rtt_val}",
+                },
+            },
+        ]
 
     def _montar_tela_osi(self):
         colors = paleta_praticas()
@@ -391,159 +616,244 @@ class LaboratorioEnderecoIP(BoxLayout):
         container.bind(minimum_height=container.setter("height"))
 
         preset = self.PRESETS_PACOTE[self._preset_atual]
+        dados_reais = self._dados_experimento_osi if self._dados_experimento_osi.get("_preset") == self._preset_atual else None
 
-        # 1. Seletor de Tráfego e Presets Rápidos
-        card_presets = _card(padding=dp(12), spacing=dp(8))
+        # 1. Gerador de Pacotes e Frame Layout
+        card_presets = criar_card(padding=dp(12), spacing=dp(8))
         header_presets = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(8))
-        header_presets.add_widget(_label("1. Seleção de Tráfego Prático (Gerador de Pacotes)", size="13sp", bold=True, color=colors["text"]))
+        header_presets.add_widget(criar_label("1. Gerador de Tráfego & Estrutura do Quadro", size="13sp", bold=True, color=colors["text"]))
         header_presets.add_widget(Widget())
-        header_presets.add_widget(_badge_pill(preset["transporte"], colors["tag_bg"], colors["accent"]))
-        card_presets.add_widget(header_presets)
-
-        row_chips = GridLayout(cols=5, spacing=dp(6), size_hint_y=None, height=dp(34))
-        for key, p in self.PRESETS_PACOTE.items():
-            selecionado = key == self._preset_atual
-            btn_chip = _button(
-                p["nome"],
-                partial(self._selecionar_preset_osi, key),
-                variant="primary" if selecionado else "secondary",
-                height=dp(32),
-                font_size="10sp"
-            )
-            row_chips.add_widget(btn_chip)
-        card_presets.add_widget(row_chips)
-        card_presets.add_widget(_label(f"Contexto: {preset['descricao']}", size="11sp", color=colors["muted"], height=dp(20)))
-        container.add_widget(card_presets)
-
-        # 2. Visualizador Gráfico de Frame Ethernet (PDU Layout)
-        card_frame = _card(padding=dp(12), spacing=dp(8), elevated=True)
-        frame_header = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(8))
-        frame_header.add_widget(_label("2. Estrutura do Quadro em Tempo Real (Frame Layout)", size="13sp", bold=True, color=colors["text"]))
-        frame_header.add_widget(Widget())
 
         payload_bytes = len(preset["payload"].encode("utf-8"))
         header_transp_bytes = 20 if preset["transporte"] == "TCP" else (8 if preset["transporte"] == "UDP" else 0)
         total_bytes = 14 + 20 + header_transp_bytes + payload_bytes + 4
 
-        frame_header.add_widget(_badge_pill(f"TOTAL: {total_bytes} BYTES", colors["success_bg"], colors["success"], "package-variant"))
-        frame_header.add_widget(_badge_pill(f"MTU: 1500 B", colors["tag_bg"], colors["muted"]))
-        card_frame.add_widget(frame_header)
+        header_presets.add_widget(criar_pill(preset["transporte"], colors["tag_bg"], colors["accent"]))
+        header_presets.add_widget(criar_pill(f"{total_bytes} BYTES • MTU 1500", colors["success_bg"], colors["success"], "package-variant-closed"))
+        card_presets.add_widget(header_presets)
 
-        # Barra visual dos blocos do pacote
-        layout_blocos = GridLayout(cols=5, spacing=dp(8), size_hint_y=None, height=dp(52))
-        layout_blocos.add_widget(_bloco_pdu("Ethernet II (L2)", "14 bytes", colors["accent"]))
-        layout_blocos.add_widget(_bloco_pdu("IPv4 Header (L3)", "20 bytes • TTL 64", colors["primary"]))
-        transp_cor = (1, .75, .22, 1) if colors["shell"][0] < .5 else (.85, .55, .08, 1)
-        layout_blocos.add_widget(_bloco_pdu(f"{preset['transporte']} Header (L4)", f"{header_transp_bytes} bytes", transp_cor))
-        layout_blocos.add_widget(_bloco_pdu(f"Payload ({preset['app_proto']})", f"{payload_bytes} bytes de dados", colors["success"]))
-        layout_blocos.add_widget(_bloco_pdu("FCS Trailer (CRC-32)", "4 bytes checagem", colors["danger"]))
-        card_frame.add_widget(layout_blocos)
+        row_chips = GridLayout(cols=5, spacing=dp(6), size_hint_y=None, height=dp(34))
+        for key, p in self.PRESETS_PACOTE.items():
+            selecionado = key == self._preset_atual
+            row_chips.add_widget(
+                criar_botao(
+                    p["nome"],
+                    partial(self._selecionar_preset_osi, key),
+                    variant="primary" if selecionado else "secondary",
+                    height=dp(32),
+                    font_size="10sp",
+                )
+            )
+        card_presets.add_widget(row_chips)
 
-        # Botão de ação prática: Transmissão Real via Docker ou Simulação
-        row_acoes = BoxLayout(size_hint_y=None, height=dp(38), spacing=dp(8))
+        # Barra HUD resumo do contexto (sem bloco longo de texto)
+        ctx_hud = GridLayout(cols=3, spacing=dp(6), size_hint_y=None, height=dp(30))
+        ctx_hud.add_widget(criar_chip_dado("Aplicação", preset["app_proto"], "success"))
+        ctx_hud.add_widget(criar_chip_dado("Origem -> Destino", f"{preset['ip_orig']}:{preset['porta_orig']} ➔ {preset['ip_dest']}:{preset['porta_dest']}", "primary"))
+        ctx_hud.add_widget(criar_chip_dado("Resumo", preset["descricao"], "accent"))
+        card_presets.add_widget(ctx_hud)
+
+        # Blocos proporcionais do Frame Ethernet
+        transp_cor = colors["warning"]
+        self._osi_frame_blocos: dict[int, BoxLayout] = {}
+        layout_blocos = GridLayout(cols=5, spacing=dp(8), size_hint_y=None, height=dp(50))
+        b_l2 = _bloco_pdu("Ethernet II (L2)", "14 bytes • MAC", colors["accent"])
+        b_l3 = _bloco_pdu("IPv4 Header (L3)", "20 bytes • TTL 64", colors["primary"])
+        b_l4 = _bloco_pdu(f"{preset['transporte']} Header (L4)", f"{header_transp_bytes} bytes", transp_cor)
+        b_app = _bloco_pdu(f"Payload ({preset['app_proto']})", f"{payload_bytes} bytes dados", colors["success"])
+        b_fcs = _bloco_pdu("FCS Trailer (C2/C1)", "4 bytes CRC-32", colors["danger"])
+        self._osi_frame_blocos = {2: b_l2, 3: b_l3, 4: b_l4, 7: b_app, 1: b_fcs}
+        for b in (b_l2, b_l3, b_l4, b_app, b_fcs):
+            layout_blocos.add_widget(b)
+        card_presets.add_widget(layout_blocos)
+
         texto_btn = (
-            "Transmitir Pacote Real via Docker (Executar no Container & Capturar com tcpdump)"
+            "Transmitir Pacote Real no Docker (tcpdump) & Iniciar Vídeo Passo a Passo"
             if self._lab_pronto
-            else "Transmitir Pacote pelo Meio Físico (Simular Desencapsulamento)"
+            else "Transmitir Pacote & Iniciar Vídeo Animado Passo a Passo"
         )
-        btn_transmitir = _button(
-            texto_btn,
-            self._transmitir_pacote_osi,
-            variant="primary",
-            height=dp(38),
-            font_size="11sp",
-            icone="docker" if self._lab_pronto else "send"
+        card_presets.add_widget(
+            criar_botao(
+                texto_btn,
+                self._transmitir_pacote_osi,
+                variant="primary",
+                height=dp(38),
+                font_size="11sp",
+                icone="docker" if self._lab_pronto else "play",
+            )
         )
-        row_acoes.add_widget(btn_transmitir)
-        card_frame.add_widget(row_acoes)
+        container.add_widget(card_presets)
 
-        # Log de transmissão em container estilizado
-        self.osi_log_box = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(48), padding=(dp(8), dp(6)))
-        with self.osi_log_box.canvas.before:
-            fill_log = Color(*colors["panel"])
-            bg_log = RoundedRectangle(pos=self.osi_log_box.pos, size=self.osi_log_box.size, radius=[dp(8)])
-        self.osi_log_box.bind(pos=lambda item, val: setattr(bg_log, "pos", val),
-                              size=lambda item, val: setattr(bg_log, "size", val))
-
-        msg_inicial = (
-            "Clique em 'Transmitir Pacote Real' para executar o tráfego de rede diretamente no container Debian e capturar o quadro Ethernet ao vivo."
-            if self._lab_pronto else
-            "Clique em 'Transmitir Pacote' para observar a modulação em bits, travessia do meio físico e o desencapsulamento passo a passo no destino."
+        # 2. HUD Telemetria + Palco Animado OSI + Player Estilo Vídeo
+        card_anim = criar_card(padding=dp(12), spacing=dp(8), elevated=True)
+        hdr_anim = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(8))
+        hdr_anim.add_widget(criar_label("2. Simulação Animada do Encapsulamento OSI (Passo a Passo)", size="13sp", bold=True, color=colors["text"]))
+        hdr_anim.add_widget(Widget())
+        self._osi_modo_pill = criar_pill(
+            "DOCKER REAL PRONTO" if dados_reais else ("PRONTO P/ TRANSMITIR" if self._lab_pronto else "SIMULAÇÃO INTERATIVA"),
+            colors["success_bg"] if dados_reais else colors["tag_bg"],
+            colors["success"] if dados_reais else colors["accent"],
         )
-        self.osi_log_label = Label(
-            text=msg_inicial,
-            font_size="10sp",
-            color=colors["muted"],
-            halign="left",
-            valign="top",
-            size_hint=(1, None),
-            height=dp(34)
+        hdr_anim.add_widget(self._osi_modo_pill)
+        card_anim.add_widget(hdr_anim)
+
+        # 4 KPIs HUD substituindo o textão do osi_log_label
+        kpi_row = GridLayout(cols=4, spacing=dp(8), size_hint_y=None, height=dp(64))
+        self._osi_kpi_status = criar_kpi_tile(
+            "Status da Execução",
+            (dados_reais or {}).get("status", "Pronto"),
+            "Container Debian PC-B" if self._lab_pronto else "Simulador Local OSI",
+            "success" if dados_reais else "accent",
         )
-        self.osi_log_label.bind(width=lambda item, val: setattr(item, "text_size", (max(1, val), None)))
-        self.osi_log_label.bind(texture_size=lambda item, val: (
-            setattr(item, "height", val[1]),
-            setattr(self.osi_log_box, "height", val[1] + dp(14))
-        ))
-        self.osi_log_box.add_widget(self.osi_log_label)
-        card_frame.add_widget(self.osi_log_box)
-
-        # Container para Frame Dump (tcpdump) real
-        self.osi_frame_box = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(0), padding=(dp(8), dp(6)), spacing=dp(2))
-        self.osi_frame_box.opacity = 0
-        with self.osi_frame_box.canvas.before:
-            Color(*colors["shell"])
-            f_bg = RoundedRectangle(pos=self.osi_frame_box.pos, size=self.osi_frame_box.size, radius=[dp(8)])
-        self.osi_frame_box.bind(pos=lambda item, val: setattr(f_bg, "pos", val),
-                                size=lambda item, val: setattr(f_bg, "size", val))
-        self.osi_frame_box.add_widget(_label("Captura Real de Pacotes (tcpdump -XX no Container Receptor):", size="9sp", bold=True, color=colors["accent"], height=dp(16)))
-        self.osi_frame_label = Label(
-            text="",
-            font_size="9sp",
-            color=colors["text_secondary"],
-            halign="left",
-            valign="top",
-            size_hint=(1, None),
-            height=dp(20)
+        self._osi_kpi_rtt = criar_kpi_tile(
+            "Latência (RTT)",
+            (dados_reais or {}).get("rtt", "-- ms"),
+            "Tempo ida e volta",
+            "primary",
         )
-        self.osi_frame_label.bind(width=lambda item, val: setattr(item, "text_size", (max(1, val), None)))
-        self.osi_frame_label.bind(texture_size=lambda item, val: (
-            setattr(item, "height", val[1]),
-            setattr(self.osi_frame_box, "height", val[1] + dp(28)) if self.osi_frame_box.opacity > 0 else None
-        ))
-        self.osi_frame_box.add_widget(self.osi_frame_label)
-        card_frame.add_widget(self.osi_frame_box)
+        self._osi_kpi_ttl = criar_kpi_tile(
+            "TTL / Transporte",
+            f"TTL {(dados_reais or {}).get('ttl', 64)} • {preset['transporte']}",
+            f"Porta dest: {preset['porta_dest']}",
+            "warning",
+        )
+        self._osi_kpi_fluxo = criar_kpi_tile(
+            "Fluxo IP / MAC",
+            f"{preset['ip_orig'][-5:]} ➔ {preset['ip_dest'][-5:]}",
+            f"MAC: {preset['mac_orig'][-5:]} ➔ {preset['mac_dest'][-5:]}",
+            "info",
+        )
+        for kpi in (self._osi_kpi_status, self._osi_kpi_rtt, self._osi_kpi_ttl, self._osi_kpi_fluxo):
+            kpi_row.add_widget(kpi)
+        card_anim.add_widget(kpi_row)
 
-        container.add_widget(card_frame)
+        palco_osi = PalcoAnimadoOSI()
+        self._osi_camada_cards: dict[int, tuple] = {}
+        self._osi_player = PlayerPassoAPasso(
+            palco_osi,
+            intervalo_autoplay=2.7,
+            on_step_change=self._ao_mudar_passo_osi,
+        )
+        card_anim.add_widget(self._osi_player)
 
-        # 3. As 7 Camadas OSI em Inspeção Prática
-        card_camadas = _card(padding=dp(12), spacing=dp(6))
-        card_camadas.add_widget(_label("3. Inspeção Prática das 7 Camadas OSI (Transmissor -> Receptor)", size="13sp", bold=True, color=colors["text"]))
+        # Drawer recolhível para dump tcpdump / dig sem poluir a tela
+        self._osi_dump_drawer = DrawerDumpBruto(
+            titulo="Captura Real do Kernel / tcpdump -XX (Opcional)",
+            icone="code-tags",
+        )
+        if dados_reais and dados_reais.get("frame_dump"):
+            self._osi_dump_drawer.definir_conteudo(dados_reais["frame_dump"], badge_texto="Capturado Docker")
+        else:
+            self._osi_dump_drawer.definir_conteudo(
+                "Clique em 'Transmitir Pacote' acima para capturar os bytes reais do quadro na interface eth0.",
+                badge_texto="Aguardando",
+            )
+        card_anim.add_widget(self._osi_dump_drawer)
+        container.add_widget(card_anim)
 
-        camadas_info = [
-            (7, "Aplicação", "Dados", f"Protocolo: {preset['app_proto']} • Payload: '{preset['payload'][:45]}...'", colors["success"]),
-            (6, "Apresentação", "Codificação", f"UTF-8 Hex: {binascii.hexlify(preset['payload'][:14].encode()).decode()} • Criptografia: {'Ativa (TLS 1.3)' if 'TLS' in preset['payload'] else 'Texto Claro'}", colors["success"]),
-            (5, "Sessão", "Diálogo", f"Sessão ID: #48291 • Modo: Full-Duplex • Gerenciamento de portas e canais lógicos", colors["info"]),
-            (4, "Transporte", "Segmento", f"Protocolo: {preset['transporte']} • Porta Origem: {preset['porta_orig']} -> Destino: {preset['porta_dest']} • Checksum L4 OK", transp_cor),
-            (3, "Rede", "Pacote IP", f"IPv4 • Origem: {preset['ip_orig']} -> Destino: {preset['ip_dest']} • TTL: 64 • Protocolo L4: {6 if preset['transporte'] == 'TCP' else (17 if preset['transporte'] == 'UDP' else 1)}", colors["primary"]),
-            (2, "Enlace", "Quadro/Frame", f"Ethernet II • MAC Origem: {preset['mac_orig']} -> Destino: {preset['mac_dest']} • EtherType: 0x0800 • CRC-32", colors["accent"]),
-            (1, "Física", "Bits no Meio", f"Sinalização: {''.join(f'{b:08b} ' for b in preset['payload'][:5].encode())}... (Pulsos elétricos na bridge Docker)", colors["danger"]),
+        # 3. Inspeção Estruturada das 7 Camadas (HUD Limpo + Clique para Pular)
+        card_camadas = criar_card(padding=dp(12), spacing=dp(6))
+        hdr_cam = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(8))
+        hdr_cam.add_widget(criar_label("3. Inspeção HUD das 7 Camadas OSI (Clique em uma camada para pular para ela)", size="13sp", bold=True, color=colors["text"]))
+        hdr_cam.add_widget(Widget())
+        hdr_cam.add_widget(criar_pill("Sincronizado com Vídeo", colors["tag_bg"], colors["muted"]))
+        card_camadas.add_widget(hdr_cam)
+
+        proto_num = 6 if preset["transporte"] == "TCP" else (17 if preset["transporte"] == "UDP" else 1)
+        utf8_hex = binascii.hexlify(preset["payload"][:12].encode()).decode()
+        bits_str = "".join(f"{b:08b} " for b in preset["payload"][:4].encode()).strip()
+        camadas_spec = [
+            (7, "Aplicação", "Dados", "success", 0, [
+                ("Protocolo", preset["app_proto"], "success"),
+                ("Payload", preset["payload"].replace("\r\n", " ")[:36], "text"),
+            ]),
+            (6, "Apresentação", "Codificação", "success", 0, [
+                ("UTF-8 Hex", f"{utf8_hex}...", "info"),
+                ("Criptografia", "Ativa (TLS 1.3)" if "TLS" in preset["payload"] else "Texto Claro", "success"),
+            ]),
+            (5, "Sessão", "Diálogo", "info", 0, [
+                ("Sessão ID", "#48291", "info"),
+                ("Controle", "Full-Duplex • Sincronizado", "text"),
+            ]),
+            (4, "Transporte", "Segmento", "warning", 1, [
+                ("Protocolo", preset["transporte"], "warning"),
+                ("Portas", f"{preset['porta_orig']} ➔ {preset['porta_dest']}", "accent"),
+                ("Checksum L4", "OK", "success"),
+            ]),
+            (3, "Rede", "Pacote IP", "primary", 2, [
+                ("IPv4", f"{preset['ip_orig']} ➔ {preset['ip_dest']}", "primary"),
+                ("TTL / L4", f"64 • Proto {proto_num}", "info"),
+            ]),
+            (2, "Enlace", "Quadro/Frame", "accent", 3, [
+                ("MAC", f"{preset['mac_orig'][-8:]} ➔ {preset['mac_dest'][-8:]}", "accent"),
+                ("EtherType", "0x0800 • FCS CRC-32", "danger"),
+            ]),
+            (1, "Física", "Bits no Meio", "danger", 4, [
+                ("Sinalização", f"{bits_str}...", "danger"),
+                ("Meio", "Pulsos elétricos • Bridge eth0", "muted"),
+            ]),
         ]
 
-        for num, nome, pdu, detalhes, cor in camadas_info:
-            linha_c = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(8))
-            badge_num = _badge_pill(f"C{num}", colors["tag_bg"], cor, height=dp(26), fixed_width=dp(42))
-            badge_pdu = _badge_pill(f"{nome} · {pdu}", colors["tag_bg"], colors["text"], height=dp(26), fixed_width=dp(175))
-            linha_c.add_widget(badge_num)
-            linha_c.add_widget(badge_pdu)
-            lbl_det = _label(detalhes, size="10sp", color=colors["text_secondary"], height=dp(26))
-            lbl_det.size_hint_x = 1
-            linha_c.add_widget(lbl_det)
-            card_camadas.add_widget(linha_c)
+        for num, nome, pdu, role, step_idx, chips in camadas_spec:
+            row_card = _BotaoCamadaInterativo(
+                partial(self._saltar_para_camada_osi, step_idx),
+                size_hint_y=None,
+                height=dp(38),
+                spacing=dp(8),
+                padding=(dp(8), dp(4)),
+            )
+            with row_card.canvas.before:
+                r_fill = Color(*colors["panel"])
+                r_bg = RoundedRectangle(pos=row_card.pos, size=row_card.size, radius=[dp(8)])
+                r_bd_col = Color(*colors["border"])
+                r_bd = Line(rounded_rectangle=(row_card.x, row_card.y, row_card.width, row_card.height, dp(8)), width=dp(1))
+            registrar_fundo(row_card, r_fill, "panel")
+            row_card.bind(
+                pos=lambda w, v, s=r_bg, b=r_bd: (setattr(s, "pos", v), setattr(b, "rounded_rectangle", (v[0], v[1], w.width, w.height, dp(8)))),
+                size=lambda w, v, s=r_bg, b=r_bd: (setattr(s, "size", v), setattr(b, "rounded_rectangle", (w.x, w.y, v[0], v[1], dp(8)))),
+            )
+
+            badge_num = criar_pill(f"C{num}", colors["tag_bg"], colors[role], height=dp(26), fixed_width=dp(42))
+            badge_pdu = criar_pill(f"{nome} · {pdu}", colors["tag_bg"], colors["text"], height=dp(26), fixed_width=dp(168))
+            badge_num.pos_hint = {"center_y": 0.5}
+            badge_pdu.pos_hint = {"center_y": 0.5}
+            row_card.add_widget(badge_num)
+            row_card.add_widget(badge_pdu)
+
+            chips_grid = GridLayout(cols=len(chips), spacing=dp(6), size_hint=(1, 1))
+            for k, v, c_role in chips:
+                chips_grid.add_widget(criar_chip_dado(k, v, cor_role=c_role, height=dp(28)))
+            row_card.add_widget(chips_grid)
+
+            card_camadas.add_widget(row_card)
+            self._osi_camada_cards[num] = (r_bd_col, role)
 
         container.add_widget(card_camadas)
-
         scroll.add_widget(container)
+
+        passos = self._passos_osi(preset, dados_reais)
+        self._osi_player.definir_passos(passos, indice_inicial=0, auto_play=False)
         return scroll
+
+    def _saltar_para_camada_osi(self, step_idx: int):
+        if hasattr(self, "_osi_player") and self._osi_player.get_root_window() is not None:
+            self._osi_player.parar()
+            self._osi_player.ir_para(step_idx, animar=True)
+
+    def _ao_mudar_passo_osi(self, _idx: int, passo: dict):
+        colors = paleta_praticas()
+        camada = int(passo.get("anim", {}).get("camada", 7))
+
+        if hasattr(self, "_osi_camada_cards"):
+            for num, (bd_col, role) in self._osi_camada_cards.items():
+                bd_col.rgba = colors[role] if num == camada else colors["border"]
+
+        if hasattr(self, "_osi_frame_blocos"):
+            for num, bloco in self._osi_frame_blocos.items():
+                if num == camada or (camada in (5, 6, 7) and num == 7):
+                    bloco._bd_col.rgba = bloco._cor_titulo
+                else:
+                    bloco._bd_col.rgba = colors["border"]
 
     def _selecionar_preset_osi(self, preset_key: str):
         self._preset_atual = preset_key
@@ -551,50 +861,66 @@ class LaboratorioEnderecoIP(BoxLayout):
 
     def _transmitir_pacote_osi(self):
         colors = paleta_praticas()
+        preset_key = self._preset_atual
         if self._lab_pronto:
-            self.osi_log_label.text = "⚡ Executando tráfego real no container Debian PC-A ➔ PC-B e capturando quadro Ethernet com tcpdump..."
-            self.osi_log_label.color = colors["warning"]
+            self._osi_kpi_status._lbl_valor.text = "Executando..."
+            self._osi_kpi_status._lbl_valor.color = colors["warning"]
+            self._osi_modo_pill.children[0].text = "CAPTURANDO NO DOCKER..."
 
             def worker():
-                dados = self.docker_lab.executar_experimento_osi(self._preset_atual)
-                Clock.schedule_once(partial(self._on_experimento_osi_concluido, dados), 0)
+                dados = self.docker_lab.executar_experimento_osi(preset_key)
+                Clock.schedule_once(partial(self._on_experimento_osi_concluido, preset_key, dados), 0)
 
             threading.Thread(target=worker, daemon=True).start()
         else:
-            preset = self.PRESETS_PACOTE[self._preset_atual]
-            linhas_log = [
-                f"[MEIO FÍSICO]: Quadro transmitido via pulsos elétricos na interface.",
-                f"1. FÍSICA: Placa de rede detectou preâmbulo e recebeu fluxo binário.",
-                f"2. ENLACE: MAC destino {preset['mac_dest']} confere com a interface. CRC-32 válido. Cabeçalho L2 removido.",
-                f"3. REDE: IP destino {preset['ip_dest']} validado. TTL decrementado (64 -> 63). Cabeçalho IPv4 removido.",
-                f"4. TRANSPORTE: {preset['transporte']} Porta {preset['porta_dest']} aceitou conexão. Cabeçalho L4 removido.",
-                f"5. APLICAÇÃO: Processo {preset['app_proto']} recebeu o payload '{preset['payload'][:35]}...' com sucesso! Status: 200 OK."
-            ]
-            self.osi_log_label.text = "\n".join(linhas_log)
-            self.osi_log_label.color = colors["success"]
+            preset = self.PRESETS_PACOTE[preset_key]
+            sim = {
+                "_preset": preset_key,
+                "status": "200 OK (Simulado)" if preset["transporte"] != "ICMP" else "Echo Reply OK",
+                "rtt": "0.18 ms",
+                "ttl": 64,
+                "ip_orig": preset["ip_orig"],
+                "ip_dest": preset["ip_dest"],
+                "mac_orig": preset["mac_orig"],
+                "mac_dest": preset["mac_dest"],
+                "porta_dest": preset["porta_dest"],
+                "detalhes": f"Fluxo {preset['app_proto']} validado nas 7 camadas OSI locais.",
+                "frame_dump": (
+                    f"[SIMULAÇÃO LOCAL] {preset['ip_orig']}.{preset['porta_orig']} > "
+                    f"{preset['ip_dest']}.{preset['porta_dest']}: {preset['transporte']} | {preset['payload']}"
+                ),
+            }
+            self._dados_experimento_osi = sim
+            self._aplicar_telemetria_e_play_osi(preset, sim)
 
-    def _on_experimento_osi_concluido(self, dados, _dt):
-        colors = paleta_praticas()
-        if not dados:
+    def _on_experimento_osi_concluido(self, preset_key: str, dados: dict, _dt):
+        if not dados or self._aba_ativa != "osi" or self._preset_atual != preset_key:
             return
-        linhas_log = [
-            f"[EXECUÇÃO REAL NO KERNEL LINUX VIA CONTAINER DEBIAN - INTERFACE eth0]:",
-            f"• Status: {dados.get('status', 'OK')} | RTT Real: {dados.get('rtt', '0.08 ms')} | TTL: {dados.get('ttl', 64)}",
-            f"1. FÍSICA: Placa detectou preâmbulo no meio físico bridge virtual da LAN.",
-            f"2. ENLACE: MAC Origem {dados.get('mac_orig')} -> MAC Destino {dados.get('mac_dest')}. Quadro Ethernet II aceito.",
-            f"3. REDE: IP Origem {dados.get('ip_orig')} -> IP Destino {dados.get('ip_dest')}. Protocolo L4: {dados.get('camada4')}.",
-            f"4. TRANSPORTE: Segmento aceito na Porta {dados.get('porta_dest')}. Handshake L4 verificado.",
-            f"5. APLICAÇÃO: Protocolo {dados.get('protocolo')} processou o payload com sucesso! ({dados.get('detalhes')})",
-        ]
-        self.osi_log_label.text = "\n".join(linhas_log)
-        self.osi_log_label.color = colors["success"]
+        if not hasattr(self, "_osi_player") or self._osi_player.get_root_window() is None:
+            return
+        dados["_preset"] = preset_key
+        self._dados_experimento_osi = dados
+        self._aplicar_telemetria_e_play_osi(self.PRESETS_PACOTE[preset_key], dados)
 
-        if hasattr(self, "osi_frame_box") and dados.get("frame_dump"):
-            self.osi_frame_box.opacity = 1
-            self.osi_frame_label.text = dados["frame_dump"][:650]
+    def _aplicar_telemetria_e_play_osi(self, preset: dict, dados: dict):
+        colors = paleta_praticas()
+        self._osi_kpi_status._lbl_valor.text = dados.get("status", "OK")
+        self._osi_kpi_status._lbl_valor.color = colors["success"]
+        self._osi_kpi_rtt._lbl_valor.text = str(dados.get("rtt", "0.14 ms"))
+        self._osi_kpi_ttl._lbl_valor.text = f"TTL {dados.get('ttl', 64)} • {preset['transporte']}"
+        self._osi_modo_pill.children[0].text = "DADO REAL DOCKER" if self._lab_pronto else "SIMULAÇÃO CONCLUÍDA"
+
+        if hasattr(self, "_osi_dump_drawer"):
+            self._osi_dump_drawer.definir_conteudo(
+                dados.get("frame_dump") or dados.get("raw_output", ""),
+                badge_texto="tcpdump Capturado" if self._lab_pronto else "Log Simulado",
+            )
+
+        passos = self._passos_osi(preset, dados)
+        self._osi_player.definir_passos(passos, indice_inicial=0, auto_play=True)
 
     # =========================================================================
-    # ABA 2: BANCADA DE ROTEAMENTO, MÁSCARAS E BITWISE AND (ROUTE TESTER)
+    # ABA 2: BANCADA DE ROTEAMENTO, MÁSCARAS & BITWISE AND (HUD + ANIMAÇÃO)
     # =========================================================================
 
     def _montar_tela_roteamento(self):
@@ -603,9 +929,9 @@ class LaboratorioEnderecoIP(BoxLayout):
         container = GridLayout(cols=1, spacing=dp(10), padding=(dp(2), dp(4)), size_hint_y=None)
         container.bind(minimum_height=container.setter("height"))
 
-        # Card de Cenários Práticos Rápidos
-        card_cenarios = _card(padding=dp(12), spacing=dp(8))
-        card_cenarios.add_widget(_label("Cenários Práticos de Roteamento e Sub-redes", size="13sp", bold=True, color=colors["text"]))
+        # 1. Cenários Práticos e Inputs
+        card_cenarios = criar_card(padding=dp(12), spacing=dp(8))
+        card_cenarios.add_widget(criar_label("1. Cenários Práticos de Roteamento & Máscaras", size="13sp", bold=True, color=colors["text"]))
 
         cenarios = (
             ("Mesma Sub-rede /24 (Comunicação Direta)", "192.168.10.10/24", "192.168.10.20/24"),
@@ -613,166 +939,342 @@ class LaboratorioEnderecoIP(BoxLayout):
             ("Máscara Incompatível (/24 vs /26)", "192.168.10.10/24", "192.168.10.130/26"),
             ("Rede Local vs Internet Pública", "192.168.10.10/24", "8.8.8.8/32"),
         )
-        grid_cen = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(76))
+        grid_cen = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(74))
         for titulo, ip_a, ip_b in cenarios:
-            btn_cen = _button(
-                titulo,
-                partial(self._aplicar_cenario_roteamento, ip_a, ip_b),
-                variant="secondary",
-                height=dp(34),
-                font_size="10sp"
+            grid_cen.add_widget(
+                criar_botao(
+                    titulo,
+                    partial(self._aplicar_cenario_roteamento, ip_a, ip_b),
+                    variant="secondary",
+                    height=dp(33),
+                    font_size="10sp",
+                )
             )
-            grid_cen.add_widget(btn_cen)
         card_cenarios.add_widget(grid_cen)
-        container.add_widget(card_cenarios)
 
-        # Configuração dos Hosts
-        card_hosts = _card(padding=dp(12), spacing=dp(8), elevated=True)
-        card_hosts.add_widget(_label("Configuração dos Hosts para Teste de Rota", size="13sp", bold=True, color=colors["text"]))
-
-        grid_inputs = GridLayout(cols=2, spacing=dp(10), size_hint_y=None, height=dp(68))
+        grid_inputs = GridLayout(cols=2, spacing=dp(10), size_hint_y=None, height=dp(64))
         self.rot_host_a = _campo("Host A (IP/Prefixo)", "Ex.: 192.168.10.10/24")
         self.rot_host_a.input.text = "192.168.10.10/24"
         self.rot_host_b = _campo("Host B (IP/Prefixo)", "Ex.: 192.168.10.20/24")
         self.rot_host_b.input.text = "192.168.10.20/24"
         grid_inputs.add_widget(self.rot_host_a)
         grid_inputs.add_widget(self.rot_host_b)
-        card_hosts.add_widget(grid_inputs)
+        card_cenarios.add_widget(grid_inputs)
 
-        btn_analisar = _button(
-            "Analisar Rota & Executar Cálculo Bitwise AND",
-            self._analisar_roteamento,
-            variant="primary",
-            height=dp(36),
-            icone="routes"
+        card_cenarios.add_widget(
+            criar_botao(
+                "Analisar Rota, Calcular Bitwise AND & Animar Decisão",
+                partial(self._analisar_roteamento, auto_play=True),
+                variant="primary",
+                height=dp(36),
+                icone="routes",
+            )
         )
-        card_hosts.add_widget(btn_analisar)
-        container.add_widget(card_hosts)
+        container.add_widget(card_cenarios)
 
-        # Painel de Diagnóstico e Demonstração da Operação Bit-a-Bit & Rota no Kernel
-        card_diag = _card(padding=dp(12), spacing=dp(8))
-        card_diag.add_widget(_label("Demonstração Prática do Cálculo Bitwise AND & Rota no Kernel", size="13sp", bold=True, color=colors["text"]))
+        # 2. Banner de Diagnóstico + Palco Animado + Player Passo a Passo
+        card_anim = criar_card(padding=dp(12), spacing=dp(8), elevated=True)
+        diag_row = BoxLayout(size_hint_y=None, height=dp(30), spacing=dp(8))
+        diag_row.add_widget(criar_label("2. Simulação Animada da Decisão de Rota (Passo a Passo)", size="13sp", bold=True, color=colors["text"]))
+        diag_row.add_widget(Widget())
+        self._rot_diag_pill = criar_pill("CALCULANDO...", colors["success_bg"], colors["success"], "check-circle-outline", height=dp(24))
+        diag_row.add_widget(self._rot_diag_pill)
+        card_anim.add_widget(diag_row)
 
-        self.rot_resultado_label = _label(
-            "Preencha os endereços e clique em Analisar para ver o cálculo binário AND realizado pelo hardware de rede.",
-            size="11sp",
-            color=colors["text"],
-            height=dp(60),
-            auto_height=True,
-            valign="top"
-        )
-        card_diag.add_widget(self.rot_resultado_label)
-        container.add_widget(card_diag)
+        self._rot_veredito_chip = criar_chip_dado("Veredito", "Analisando hosts...", "success", height=dp(32))
+        card_anim.add_widget(self._rot_veredito_chip)
 
-        # Painel Dedicado ao Teste Prático de Conectividade ICMP (Ping)
-        card_ping = _card(padding=dp(12), spacing=dp(8), elevated=True)
-        card_ping.add_widget(_label("Teste Prático de Conectividade ICMP (Ping Real entre Hosts)", size="13sp", bold=True, color=colors["text"]))
+        self._palco_rot = PalcoAnimadoRoteamento()
+        self._rot_player = PlayerPassoAPasso(self._palco_rot, intervalo_autoplay=2.8)
+        card_anim.add_widget(self._rot_player)
+        container.add_widget(card_anim)
+
+        # 3. HUD Visual Bitwise AND (Sem Poluição de Texto!)
+        card_and = criar_card(padding=dp(12), spacing=dp(8))
+        hdr_and = BoxLayout(size_hint_y=None, height=dp(24), spacing=dp(8))
+        hdr_and.add_widget(criar_label("3. Comparativo HUD Bitwise AND (IP & Máscara = Rede)", size="13sp", bold=True, color=colors["text"]))
+        hdr_and.add_widget(Widget())
+        hdr_and.add_widget(criar_pill("Azul: Bits Rede (Net ID)", colors["tag_bg"], colors["primary"], height=dp(22)))
+        hdr_and.add_widget(criar_pill("Verde: Bits Host (Host ID)", colors["success_bg"], colors["success"], height=dp(22)))
+        card_and.add_widget(hdr_and)
+
+        self._rot_bits_box = GridLayout(cols=1, spacing=dp(8), size_hint_y=None)
+        self._rot_bits_box.bind(minimum_height=self._rot_bits_box.setter("height"))
+        card_and.add_widget(self._rot_bits_box)
+        container.add_widget(card_and)
+
+        # 4. HUD Real do Kernel Linux (FIB / ARP) & Ping ICMP
+        card_ping = criar_card(padding=dp(12), spacing=dp(8), elevated=True)
+        hdr_ping = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(8))
+        hdr_ping.add_widget(criar_label("4. Telemetria do Kernel Linux (FIB / ARP) & Ping ICMP", size="13sp", bold=True, color=colors["text"]))
+        hdr_ping.add_widget(Widget())
+        self._rot_ping_badge = criar_pill("PRONTO P/ PING", colors["tag_bg"], colors["accent"])
+        hdr_ping.add_widget(self._rot_ping_badge)
+        card_ping.add_widget(hdr_ping)
+
+        fib_row = GridLayout(cols=4, spacing=dp(8), size_hint_y=None, height=dp(64))
+        self._rot_kpi_rota = criar_kpi_tile("Rota FIB (ip route)", "--", "Tabela do kernel", "primary")
+        self._rot_kpi_iface = criar_kpi_tile("Interface / Via", "--", "Next-Hop", "accent")
+        self._rot_kpi_arp = criar_kpi_tile("Vizinho ARP (ip neigh)", "Aguardando", "Resolução MAC L2", "info")
+        self._rot_kpi_perda = criar_kpi_tile("Ping / Perda", "--", "4 pacotes ICMP", "success")
+        for k in (self._rot_kpi_rota, self._rot_kpi_iface, self._rot_kpi_arp, self._rot_kpi_perda):
+            fib_row.add_widget(k)
+        card_ping.add_widget(fib_row)
 
         texto_ping = "Executar Teste de Ping ICMP Real (Container PC-A)" if self._lab_pronto else "Executar Teste de Ping ICMP (4 Pacotes)"
-        btn_ping = _button(texto_ping, self._executar_ping_cenario, variant="primary", height=dp(36), icone="network")
-        card_ping.add_widget(btn_ping)
+        card_ping.add_widget(criar_botao(texto_ping, self._executar_ping_cenario, variant="primary", height=dp(36), icone="network"))
 
-        self.rot_ping_box = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(44), padding=(dp(8), dp(6)))
-        with self.rot_ping_box.canvas.before:
-            fill_p = Color(*colors["panel"])
-            bg_p = RoundedRectangle(pos=self.rot_ping_box.pos, size=self.rot_ping_box.size, radius=[dp(8)])
-        self.rot_ping_box.bind(pos=lambda item, val: setattr(bg_p, "pos", val),
-                               size=lambda item, val: setattr(bg_p, "size", val))
+        # Strip visual de 4 pacotes ICMP em vez de texto cru
+        self._rot_ping_strip = GridLayout(cols=4, spacing=dp(8), size_hint_y=None, height=dp(34))
+        for seq in range(1, 5):
+            self._rot_ping_strip.add_widget(criar_chip_dado(f"ICMP #{seq}", "Aguardando", "muted", height=dp(32)))
+        card_ping.add_widget(self._rot_ping_strip)
 
-        self.rot_ping_label = _label("Clique no botão acima para disparar 4 pacotes ICMP e medir a latência real.",
-                                     size="10sp", color=colors["muted"], height=dp(30), auto_height=True, valign="top")
-        self.rot_ping_label.bind(texture_size=lambda item, val: setattr(self.rot_ping_box, "height", max(dp(44), val[1] + dp(14))))
-        self.rot_ping_box.add_widget(self.rot_ping_label)
-        card_ping.add_widget(self.rot_ping_box)
+        self._rot_dump_drawer = DrawerDumpBruto(titulo="Logs Brutos do Kernel (ip route get, ip neigh, ping)", icone="console")
+        self._rot_dump_drawer.definir_conteudo("Execute a análise ou Ping para visualizar os comandos brutos do kernel.", "Pronto")
+        card_ping.add_widget(self._rot_dump_drawer)
+
         container.add_widget(card_ping)
-
         scroll.add_widget(container)
-        Clock.schedule_once(lambda _dt: self._analisar_roteamento(), 0)
+
+        self._analisar_roteamento(auto_play=False)
         return scroll
 
     def _aplicar_cenario_roteamento(self, ip_a: str, ip_b: str):
         if hasattr(self, "rot_host_a") and hasattr(self, "rot_host_b"):
             self.rot_host_a.input.text = ip_a
             self.rot_host_b.input.text = ip_b
-            self._analisar_roteamento()
+            self._analisar_roteamento(auto_play=True)
 
-    def _analisar_roteamento(self):
+    def _analisar_roteamento(self, auto_play: bool = False):
         colors = paleta_praticas()
         try:
             iface_a = ipaddress.ip_interface(self.rot_host_a.input.text.strip())
             iface_b = ipaddress.ip_interface(self.rot_host_b.input.text.strip())
         except ValueError:
-            self.rot_resultado_label.text = "Erro: Digite endereços IPv4 válidos com prefixo CIDR (ex: 192.168.10.10/24)."
-            registrar_cor_texto(self.rot_resultado_label, colors["danger"], "danger")
+            self._rot_veredito_chip.children[0].text = "Erro: informe endereços IPv4 válidos com prefixo (ex: 192.168.10.10/24)."
             return
 
         rede_a = iface_a.network
         rede_b = iface_b.network
 
-        ip_a_bin = ".".join(f"{b:08b}" for b in iface_a.ip.packed)
-        mask_a_bin = ".".join(f"{b:08b}" for b in rede_a.netmask.packed)
-        net_a_bin = ".".join(f"{b:08b}" for b in rede_a.network_address.packed)
-
-        ip_b_bin = ".".join(f"{b:08b}" for b in iface_b.ip.packed)
-        mask_b_bin = ".".join(f"{b:08b}" for b in rede_b.netmask.packed)
-        net_b_bin = ".".join(f"{b:08b}" for b in rede_b.network_address.packed)
-
-        ip_b_na_mascara_de_a = ipaddress.ip_network(f"{iface_b.ip}/{rede_a.prefixlen}", strict=False)
-        a_enxerga_b_local = (ip_b_na_mascara_de_a.network_address == rede_a.network_address)
-
-        ip_a_na_mascara_de_b = ipaddress.ip_network(f"{iface_a.ip}/{rede_b.prefixlen}", strict=False)
-        b_enxerga_a_local = (ip_a_na_mascara_de_b.network_address == rede_b.network_address)
-
-        linhas = [
-            f"[CÁLCULO BITWISE AND DO HOST A]:",
-            f"  IP Host A:   {ip_a_bin}  ({iface_a.ip})",
-            f"  Máscara:     {mask_a_bin}  (/{rede_a.prefixlen})",
-            f"  AND = Rede:  {net_a_bin}  ({rede_a.network_address})\n",
-            f"[CÁLCULO BITWISE AND DO HOST B]:",
-            f"  IP Host B:   {ip_b_bin}  ({iface_b.ip})",
-            f"  Máscara:     {mask_b_bin}  (/{rede_b.prefixlen})",
-            f"  AND = Rede:  {net_b_bin}  ({rede_b.network_address})\n",
-        ]
+        ip_b_na_mask_a = ipaddress.ip_network(f"{iface_b.ip}/{rede_a.prefixlen}", strict=False)
+        a_enxerga_b_local = ip_b_na_mask_a.network_address == rede_a.network_address
+        ip_a_na_mask_b = ipaddress.ip_network(f"{iface_a.ip}/{rede_b.prefixlen}", strict=False)
+        b_enxerga_a_local = ip_a_na_mask_b.network_address == rede_b.network_address
 
         if rede_a == rede_b:
-            linhas.append(f"✓ DIAGNÓSTICO: MESMA SUB-REDE ({rede_a})")
-            linhas.append("  • Comunicação DIRETA na Camada 2 (Enlace) via Switch local.")
-            linhas.append("  • Host A envia broadcast ARP para descobrir o endereço MAC de Host B e transmite o quadro sem passar por roteador.")
-            registrar_cor_texto(self.rot_resultado_label, colors["success"], "success")
+            modo = "local"
+            badge_txt = f"MESMA SUB-REDE ({rede_a})"
+            cor_diag = "success"
+            veredito_txt = "Comunicação direta em Camada 2 via Switch local (ARP descobre MAC sem Roteador)."
         elif a_enxerga_b_local and not b_enxerga_a_local:
-            linhas.append("⚡ DIAGNÓSTICO: MÁSCARA ASSIMÉTRICA / INCOMPATÍVEL!")
-            linhas.append(f"  • Host A acha que B é local (Rede {rede_a}), mas Host B sabe que A está em outra sub-rede ({rede_b}).")
-            linhas.append("  • Host A tentará ARP direto e Host B responderá via Gateway, causando falha de comunicação.")
-            registrar_cor_texto(self.rot_resultado_label, colors["warning"], "warning")
+            modo = "assimetrica"
+            badge_txt = "MÁSCARA ASSIMÉTRICA"
+            cor_diag = "warning"
+            veredito_txt = f"Host A acha que B é local ({rede_a}), mas B vê A em rede externa ({rede_b})! Causa falha ARP/Gateway."
         else:
-            linhas.append("⚡ DIAGNÓSTICO: SUB-REDES DIFERENTES (ROTEAMENTO L3 OBRIGATÓRIO)")
-            linhas.append(f"  • Rede A: {rede_a}  ≠  Rede B: {rede_b}")
-            linhas.append("  • O pacote NÃO pode ser entregue diretamente pelo switch.")
-            linhas.append("  • Host A encaminha o pacote para o MAC do Gateway Padrão (Roteador), que inspeciona o cabeçalho IP e faz o salto de rede.")
-            registrar_cor_texto(self.rot_resultado_label, colors["text"], "text")
+            modo = "roteador"
+            badge_txt = "ROTEAMENTO L3 OBRIGATÓRIO"
+            cor_diag = "primary"
+            veredito_txt = f"Sub-redes distintas ({rede_a} ≠ {rede_b}): o pacote precisa ir ao Roteador Gateway."
 
-        self.rot_resultado_label.text = "\n".join(linhas)
+        self._rot_diag_pill.children[0].text = badge_txt
+        self._rot_veredito_chip.children[0].text = veredito_txt
+        registrar_cor_texto(self._rot_veredito_chip.children[0], colors[cor_diag], cor_diag)
+
+        self._palco_rot.configurar_hosts(str(iface_a), str(iface_b), modo)
+
+        # Reconstrói visualizador HUD Bitwise AND (Host A e Host B)
+        self._rot_bits_box.clear_widgets()
+        for titulo_h, iface, rede, cor_h in (
+            ("HOST A (ORIGEM)", iface_a, rede_a, "primary"),
+            ("HOST B (DESTINO)", iface_b, rede_b, "success"),
+        ):
+            bloco_h = BoxLayout(
+                orientation="vertical",
+                size_hint_y=None,
+                height=dp(134),
+                padding=(dp(10), dp(8)),
+                spacing=dp(5),
+            )
+            with bloco_h.canvas.before:
+                fill_b = Color(*colors["panel"])
+                bg_b = RoundedRectangle(pos=bloco_h.pos, size=bloco_h.size, radius=[dp(10)])
+                Color(*colors["border"])
+                bd_b = Line(rounded_rectangle=(bloco_h.x, bloco_h.y, bloco_h.width, bloco_h.height, dp(10)), width=dp(1))
+            registrar_fundo(bloco_h, fill_b, "panel")
+            bloco_h.bind(
+                pos=lambda w, v, s=bg_b, b=bd_b: (setattr(s, "pos", v), setattr(b, "rounded_rectangle", (v[0], v[1], w.width, w.height, dp(10)))),
+                size=lambda w, v, s=bg_b, b=bd_b: (setattr(s, "size", v), setattr(b, "rounded_rectangle", (w.x, w.y, v[0], v[1], dp(10)))),
+            )
+            bloco_h.add_widget(
+                criar_label(f"{titulo_h}  •  Rede resultante: {rede}", size="10.5sp", bold=True, color=colors[cor_h], height=dp(20), role=cor_h)
+            )
+            bloco_h.add_widget(construir_visualizador_bits_ipv4(iface.ip.packed, rede.prefixlen, "IP do Host", str(iface.ip)))
+            bloco_h.add_widget(construir_visualizador_bits_ipv4(rede.netmask.packed, rede.prefixlen, f"Máscara /{rede.prefixlen}", str(rede.netmask)))
+            bloco_h.add_widget(construir_visualizador_bits_ipv4(rede.network_address.packed, rede.prefixlen, "AND = Rede", str(rede.network_address)))
+            self._rot_bits_box.add_widget(bloco_h)
+
+        # Atualiza KPI FIB simulado ou consulta Docker real
+        if modo == "local":
+            self._rot_kpi_rota._lbl_valor.text = f"Direta ({rede_a})"
+            self._rot_kpi_iface._lbl_valor.text = "eth0 (Broadcast L2)"
+        else:
+            self._rot_kpi_rota._lbl_valor.text = "Via Gateway Padrão"
+            self._rot_kpi_iface._lbl_valor.text = "eth0 ➔ Roteador L3"
+
+        # Monta passos animados da decisão de rota
+        passos_rot = [
+            {
+                "curto": "1. AND A",
+                "badge": "PASSO 1/5 • HARDWARE DA PLACA DE REDE (HOST A)",
+                "titulo": "Host A calcula sua própria sub-rede via Bitwise AND",
+                "resumo": (
+                    f"A placa de rede de A executa IP_A ({iface_a.ip}) AND Máscara_A (/{rede_a.prefixlen}). "
+                    f"Onde há bit 1 na máscara, preserva o bit do IP; onde há 0, zera. Rede A = {rede_a.network_address}."
+                ),
+                "cor": "primary",
+                "dados": [
+                    ("IP Host A", str(iface_a.ip), "primary"),
+                    ("Máscara A", f"/{rede_a.prefixlen} ({rede_a.netmask})", "info"),
+                    ("Rede A", str(rede_a.network_address), "success"),
+                ],
+                "anim": {"ativos": ("A",), "edges": (), "de": "A", "para": "A", "pkt_label": f"AND A=/{rede_a.prefixlen}"},
+            },
+            {
+                "curto": "2. AND Dest",
+                "badge": "PASSO 2/5 • TESTE DE PROXIMIDADE POR HOST A",
+                "titulo": "Host A aplica SUA própria máscara sobre o IP destino B",
+                "resumo": (
+                    f"Host A calcula IP_B ({iface_b.ip}) AND Máscara_A (/{rede_a.prefixlen}) = {ip_b_na_mask_a.network_address}. "
+                    + (
+                        "O resultado bate com Rede A! Logo, A considera B um vizinho LOCAL."
+                        if a_enxerga_b_local
+                        else f"Diferente de {rede_a.network_address}! Logo, A sabe que B está em OUTRA rede."
+                    )
+                ),
+                "cor": "accent" if a_enxerga_b_local else "warning",
+                "dados": [
+                    ("IP B + Mask A", str(ip_b_na_mask_a.network_address), "accent"),
+                    ("Rede A", str(rede_a.network_address), "primary"),
+                    ("Visão de A", "Local (L2)" if a_enxerga_b_local else "Remota (L3)", "success" if a_enxerga_b_local else "warning"),
+                ],
+                "anim": {"ativos": ("A", "SW"), "edges": ("A_SW",), "de": "A", "para": "SW", "pkt_label": "Checa Destino"},
+            },
+            {
+                "curto": "3. Visão B",
+                "badge": "PASSO 3/5 • SIMETRIA DE MÁSCARA EM HOST B",
+                "titulo": "Verificação da máscara configurada no destino Host B",
+                "resumo": (
+                    f"No sentido inverso, B aplica sua máscara /{rede_b.prefixlen} sobre A ({iface_a.ip}) -> {ip_a_na_mask_b.network_address}. "
+                    + (
+                        "ERRO DE REDE! A enxerga B como local, mas B enxerga A como remoto — o retorno falha!"
+                        if modo == "assimetrica"
+                        else "Ambos concordam com a mesma topologia (simetria válida)."
+                    )
+                ),
+                "cor": "danger" if modo == "assimetrica" else "info",
+                "dados": [
+                    ("Rede B", str(rede_b), "success"),
+                    ("Visão de B", "Local" if b_enxerga_a_local else "Via Gateway", "info"),
+                    ("Simetria", "ASSIMÉTRICA!" if modo == "assimetrica" else "Simétrica OK", "danger" if modo == "assimetrica" else "success"),
+                ],
+                "anim": {
+                    "ativos": ("B", "GW" if modo != "local" else "SW"),
+                    "edges": ("GW_B", "SW_GW") if modo != "local" else ("SW_B",),
+                    "de": "B",
+                    "para": "GW" if modo != "local" else "SW",
+                    "pkt_label": "Assimetria!" if modo == "assimetrica" else f"Mask B=/{rede_b.prefixlen}",
+                },
+            },
+            {
+                "curto": "4. Caminho",
+                "badge": "PASSO 4/5 • ENCAMINHAMENTO NO SWITCH / ROTEADOR",
+                "titulo": (
+                    "Switch L2 entrega direto após Broadcast ARP"
+                    if modo == "local"
+                    else ("Conflito: ARP direto de A vs Gateway em B!" if modo == "assimetrica" else "Pacote encaminhado ao Roteador (Gateway Padrão)")
+                ),
+                "resumo": (
+                    f"Host A envia broadcast ARP ('Quem tem {iface_b.ip}?'), descobre o MAC de B e envia o quadro direto via Switch."
+                    if modo == "local"
+                    else (
+                        "Host A tenta ARP direto na rede local enquanto Host B tenta devolver pelo Gateway Padrão."
+                        if modo == "assimetrica"
+                        else "Switch entrega o quadro ao MAC do Roteador. Na Camada 3, o Roteador consulta sua FIB e encaminha para Rede B!"
+                    )
+                ),
+                "cor": "success" if modo == "local" else ("danger" if modo == "assimetrica" else "warning"),
+                "dados": [
+                    ("Caminho Físico", "A ➔ Switch ➔ B" if modo == "local" else "A ➔ Switch ➔ Gateway ➔ B", "accent"),
+                    ("Resolução ARP", f"ARP para {iface_b.ip}" if modo == "local" else "ARP para Gateway", "primary"),
+                    ("Salto TTL", "Sem salto L3" if modo == "local" else "TTL -1 no Roteador", "warning"),
+                ],
+                "anim": {
+                    "ativos": ("A", "SW", "B") if modo == "local" else ("A", "SW", "GW", "B"),
+                    "edges": ("A_SW", "SW_B") if modo == "local" else ("A_SW", "SW_GW", "GW_B"),
+                    "de": "SW" if modo == "local" else "GW",
+                    "para": "B",
+                    "pkt_label": "ARP Direct L2" if modo == "local" else "Salto L3 Gateway",
+                },
+            },
+            {
+                "curto": "5. Conclusão",
+                "badge": "PASSO 5/5 • DIAGNÓSTICO FINAL DE ROTEAMENTO",
+                "titulo": badge_txt,
+                "resumo": veredito_txt,
+                "cor": cor_diag,
+                "dados": [
+                    ("Diagnóstico", badge_txt, cor_diag),
+                    ("Host A", str(iface_a), "primary"),
+                    ("Host B", str(iface_b), "success"),
+                ],
+                "anim": {
+                    "ativos": ("A", "B") if modo != "assimetrica" else ("A", "GW", "B"),
+                    "edges": ("A_SW", "SW_B") if modo == "local" else ("A_SW", "SW_GW", "GW_B"),
+                    "de": "B",
+                    "para": "A",
+                    "pkt_label": "Falha Retorno!" if modo == "assimetrica" else "Rota Validada",
+                },
+            },
+        ]
+
+        self._rot_player.definir_passos(passos_rot, indice_inicial=0, auto_play=auto_play)
 
         if self._lab_pronto:
             def worker():
                 ok_r, out_r = self.docker_lab.consultar_rota_kernel(str(iface_b.ip))
                 arp_out = self.docker_lab.consultar_vizinhos_arp()
                 Clock.schedule_once(partial(self._on_rota_kernel_concluida, ok_r, out_r, arp_out, str(iface_b.ip)), 0)
-            threading.Thread(target=worker, daemon=True).start()
 
-    def _on_rota_kernel_concluida(self, ok, out_route, arp_out, ip_destino, _dt):
-        if not hasattr(self, "rot_resultado_label"):
+            threading.Thread(target=worker, daemon=True).start()
+        else:
+            raw_fib = (
+                f"# Modo Simulado (Docker offline)\n"
+                f"# Calculo: {iface_a} -> {rede_a} vs {iface_b} -> {rede_b}\n"
+                f"# Veredito: {veredito_txt}"
+            )
+            self._rot_dump_drawer.definir_conteudo(raw_fib, "Simulação Local")
+
+    def _on_rota_kernel_concluida(self, _ok, out_route: str, arp_out: str, ip_destino: str, _dt):
+        if self._aba_ativa != "roteamento" or not hasattr(self, "_rot_kpi_rota") or self._rot_kpi_rota.get_root_window() is None:
             return
-        base_text = self.rot_resultado_label.text
-        if "[CONSULTA REAL AO KERNEL LINUX" not in base_text:
-            extra = [
-                "",
-                "[CONSULTA REAL À TABELA FIB DO KERNEL LINUX - CONTAINER PC-A]:",
-                f"# ip route get {ip_destino}",
-                f"  {out_route}",
-                f"# Tabela ARP (ip neigh): {arp_out or 'Sem vizinho pré-armazenado no cache'}",
-            ]
-            self.rot_resultado_label.text = base_text + "\n" + "\n".join(extra)
+        curto_route = out_route.splitlines()[0][:32] if out_route else "Sem rota"
+        self._rot_kpi_rota._lbl_valor.text = curto_route
+        mac_arp = "Cache vazio"
+        if arp_out:
+            for ln in arp_out.splitlines():
+                if "lladdr" in ln:
+                    parts = ln.split()
+                    if "lladdr" in parts:
+                        idx_m = parts.index("lladdr")
+                        if idx_m + 1 < len(parts):
+                            mac_arp = f"{parts[idx_m + 1][-8:]} ({parts[-1]})"
+                            break
+        self._rot_kpi_arp._lbl_valor.text = mac_arp
+        dump_txt = f"$ ip route get {ip_destino}\n{out_route}\n\n$ ip neigh show\n{arp_out or '(Cache ARP vazio)'}"
+        self._rot_dump_drawer.definir_conteudo(dump_txt, "Kernel FIB/ARP OK")
 
     def _executar_ping_cenario(self):
         colors = paleta_praticas()
@@ -783,8 +1285,8 @@ class LaboratorioEnderecoIP(BoxLayout):
             return
 
         if self._lab_pronto:
-            self.rot_ping_label.text = f"⚡ Executando ping -c 4 no container Debian PC-A em direção a {iface_b.ip}..."
-            self.rot_ping_label.color = colors["warning"]
+            self._rot_ping_badge.children[0].text = "DISPARANDO ICMP..."
+            self._rot_kpi_perda._lbl_valor.text = "Testando..."
 
             def worker():
                 ok, output = self.docker_lab.executar_ping_real(str(iface_b.ip), contagem=4)
@@ -792,35 +1294,412 @@ class LaboratorioEnderecoIP(BoxLayout):
 
             threading.Thread(target=worker, daemon=True).start()
         else:
-            self._simular_ping()
-
-    def _on_ping_real_concluido(self, ok, output, iface_a, iface_b, _dt):
-        colors = paleta_praticas()
-        badge = "[PING REAL NO KERNEL LINUX - CONTAINER DEBIAN PC-A]"
-        self.rot_ping_label.text = f"{badge}\n{output}"
-        self.rot_ping_label.color = colors["success"] if ok else colors["danger"]
-
-    def _simular_ping(self):
-        try:
-            iface_a = ipaddress.ip_interface(self.rot_host_a.input.text.strip())
-            iface_b = ipaddress.ip_interface(self.rot_host_b.input.text.strip())
-        except ValueError:
-            return
-
-        mesma_rede = (iface_a.network == iface_b.network)
-        rtt_base = 0.6 if mesma_rede else 14.2
-        linhas = [f"PING {iface_b.ip} a partir de {iface_a.ip} com 32 bytes de dados ICMP (Simulado):"]
-
-        for seq in range(1, 5):
-            rtt = rtt_base + random.uniform(0.1, 0.4)
+            mesma_rede = iface_a.network == iface_b.network
+            rtt_base = 0.55 if mesma_rede else 14.2
             ttl = 64 if mesma_rede else 63
-            linhas.append(f"Resposta de {iface_b.ip}: bytes=32 tempo={rtt:.2f}ms TTL={ttl} seq={seq}")
+            tempos = [f"{rtt_base + random.uniform(0.08, 0.32):.2f} ms" for _ in range(4)]
+            raw_sim = [f"PING {iface_b.ip} a partir de {iface_a.ip} (Simulado):"]
+            for i, tm in enumerate(tempos, 1):
+                raw_sim.append(f"64 bytes de {iface_b.ip}: icmp_seq={i} ttl={ttl} time={tm}")
+            raw_sim.append("4 packets transmitted, 4 received, 0% packet loss")
+            self._atualizar_hud_ping(True, tempos, "0% perda", "\n".join(raw_sim), real=False)
 
-        linhas.append(f"Estatísticas: 4 pacotes transmitidos, 4 recebidos, 0% perda ({'Tráfego local LAN' if mesma_rede else 'Roteamento L3 via Gateway'}).")
-        self.rot_ping_label.text = "\n".join(linhas)
+    def _on_ping_real_concluido(self, ok: bool, output: str, _iface_a, _iface_b, _dt):
+        if self._aba_ativa != "roteamento" or not hasattr(self, "_rot_ping_strip") or self._rot_ping_strip.get_root_window() is None:
+            return
+        tempos = re.findall(r"time=([\d.]+\s*ms)", output)
+        perda = "0% perda"
+        m_loss = re.search(r"(\d+%)\s*packet loss", output)
+        if m_loss:
+            perda = f"{m_loss.group(1)} perda"
+        elif not ok and not tempos:
+            perda = "100% perda (Inalcançável)"
+        self._atualizar_hud_ping(ok, tempos, perda, output, real=True)
+
+    def _atualizar_hud_ping(self, ok: bool, tempos: list[str], perda: str, raw_out: str, *, real: bool):
+        colors = paleta_praticas()
+        self._rot_ping_badge.children[0].text = ("PING DOCKER OK" if ok else "FALHA ICMP") if real else "PING SIMULADO OK"
+        self._rot_kpi_perda._lbl_valor.text = perda
+        self._rot_kpi_perda._lbl_valor.color = colors["success"] if ok else colors["danger"]
+
+        self._rot_ping_strip.clear_widgets()
+        for seq in range(1, 5):
+            if seq - 1 < len(tempos):
+                self._rot_ping_strip.add_widget(criar_chip_dado(f"ICMP #{seq}", f"{tempos[seq - 1]} OK", "success", height=dp(32)))
+            else:
+                self._rot_ping_strip.add_widget(criar_chip_dado(f"ICMP #{seq}", "Timeout / Sem rota", "danger", height=dp(32)))
+
+        if hasattr(self, "_rot_dump_drawer"):
+            atual = self._rot_dump_drawer._texto_bruto
+            prefixo = f"{atual}\n\n" if atual and "PING " not in atual else ""
+            self._rot_dump_drawer.definir_conteudo(f"{prefixo}$ ping -c 4\n{raw_out}", "Ping + FIB")
 
     # =========================================================================
-    # ABA 3: CALCULADORA CIDR & CONVERSOR IP PROFISSIONAL
+    # ABA 3: RESOLUÇÃO DNS HIERÁRQUICA (HUD ESTRUTURADO + ANIMAÇÃO PASSO A PASSO)
+    # =========================================================================
+
+    def _passos_dns(self, dominio: str, tipo: str, dados: dict) -> list[dict]:
+        partes = dominio.strip(".").split(".")
+        tld = f".{partes[-1]}" if len(partes) > 1 else ".local"
+        servidor_dns = dados.get("servidor_dns", "192.168.10.20")
+        resposta = dados.get("resposta_principal", "192.168.10.20")
+        ttl_s = dados.get("ttl", 300)
+        rtt = dados.get("rtt", "2 ms")
+
+        subs_base = {
+            "CLI": "Cache: MISS",
+            "RES": f"DNS {servidor_dns}",
+            "ROOT": "Raiz Global (.)",
+            "TLD": f"TLD {tld}",
+            "AUTH": f"NS {dominio[:16]}",
+        }
+
+        return [
+            {
+                "curto": "1. Cache SO",
+                "badge": "PASSO 1/6 • CLIENTE E CACHE LOCAL (PC-A)",
+                "titulo": f"Aplicação solicita '{dominio}' ({tipo}) e verifica Cache Local",
+                "resumo": (
+                    f"Antes de enviar qualquer pacote na rede, PC-A verifica seu cache DNS em RAM e o arquivo /etc/hosts. "
+                    f"Como não há registro válido para '{dominio}', ocorre Cache MISS."
+                ),
+                "cor": "primary",
+                "dados": [
+                    ("Domínio", dominio, "primary"),
+                    ("Tipo Query", tipo, "accent"),
+                    ("Cache Local", "MISS (Ausente)", "warning"),
+                ],
+                "anim": {"edge": "", "ativos": ("CLI",), "de": "CLI", "para": "CLI", "pkt_label": "Cache MISS", "subs": subs_base},
+            },
+            {
+                "curto": "2. Resolver",
+                "badge": "PASSO 2/6 • ENVIO UDP/53 AO RESOLVER RECURSIVO",
+                "titulo": f"PC-A envia Query DNS via UDP Porta 53 para {servidor_dns}",
+                "resumo": (
+                    f"PC-A envia um datagrama UDP porta 53 com flag RD=1 (Recursion Desired) pedindo ao Resolver "
+                    f"que descubra o registro {tipo} de '{dominio}'."
+                ),
+                "cor": "accent",
+                "dados": [
+                    ("Transporte", "UDP :53", "warning"),
+                    ("Resolver", servidor_dns, "accent"),
+                    ("Flags DNS", "RD=1 (Recursiva)", "info"),
+                ],
+                "anim": {
+                    "edge": "CLI_RES",
+                    "ativos": ("CLI", "RES"),
+                    "de": "CLI",
+                    "para": "RES",
+                    "pkt_label": f"QUERY {tipo}",
+                    "subs": {**subs_base, "RES": "Recebeu Query"},
+                },
+            },
+            {
+                "curto": "3. Root (.)",
+                "badge": "PASSO 3/6 • CONSULTA AO SERVIDOR RAIZ (ROOT)",
+                "titulo": f"Resolver consulta Root Server sobre a extensão '{tld}'",
+                "resumo": (
+                    f"Se o Resolver não tiver '{dominio}' em cache, ele pergunta a um dos 13 clusters Root (.) "
+                    f"onde estão os servidores responsáveis pelo domínio de topo '{tld}'."
+                ),
+                "cor": "warning",
+                "dados": [
+                    ("Consulta Root", f"Quem atende '{tld}'?", "warning"),
+                    ("Resposta Root", f"IP do TLD {tld}", "success"),
+                    ("Tipo Resposta", "Referral (NS)", "info"),
+                ],
+                "anim": {
+                    "edge": "RES_ROOT",
+                    "ativos": ("RES", "ROOT"),
+                    "de": "RES",
+                    "para": "ROOT",
+                    "pkt_label": f"TLD {tld}?",
+                    "subs": {**subs_base, "ROOT": f"Indica TLD {tld}"},
+                },
+            },
+            {
+                "curto": f"4. TLD {tld}",
+                "badge": f"PASSO 4/6 • CONSULTA AO SERVIDOR TLD ({tld})",
+                "titulo": f"Servidor TLD informa quem é o Autoritativo de '{dominio}'",
+                "resumo": (
+                    f"O Resolver segue para o servidor TLD '{tld}', que consulta sua lista de delegações e retorna "
+                    f"o endereço do Nameserver Autoritativo oficial de '{dominio}'."
+                ),
+                "cor": "info",
+                "dados": [
+                    ("Servidor TLD", f"Zona {tld}", "info"),
+                    ("Retorno NS", f"ns1.{dominio}", "accent"),
+                    ("Delegação", "Autoritativo OK", "success"),
+                ],
+                "anim": {
+                    "edge": "RES_TLD",
+                    "ativos": ("RES", "TLD"),
+                    "de": "RES",
+                    "para": "TLD",
+                    "pkt_label": "NS Oficial?",
+                    "subs": {**subs_base, "TLD": f"Indica ns1"},
+                },
+            },
+            {
+                "curto": "5. Autorit.",
+                "badge": "PASSO 5/6 • RESPOSTA OFICIAL DO SERVIDOR AUTORITATIVO",
+                "titulo": f"Autoritativo responde o registro {tipo}: {resposta}",
+                "resumo": (
+                    f"O Servidor Autoritativo lê sua tabela oficial de zona DNS e retorna a resposta autoritativa (flag AA=1): "
+                    f"'{dominio} IN {tipo} {resposta}' com TTL de {ttl_s}s."
+                ),
+                "cor": "success",
+                "dados": [
+                    ("Registro", f"{tipo} = {resposta}", "success"),
+                    ("TTL Vida", f"{ttl_s} segundos", "primary"),
+                    ("Status Header", "NOERROR (AA=1)", "success"),
+                ],
+                "anim": {
+                    "edge": "RES_AUTH",
+                    "ativos": ("RES", "AUTH"),
+                    "de": "AUTH",
+                    "para": "RES",
+                    "pkt_label": "RESP OK!",
+                    "subs": {**subs_base, "AUTH": f"{tipo}: {resposta[:18]}"},
+                },
+            },
+            {
+                "curto": "6. Cache & IP",
+                "badge": "PASSO 6/6 • ENTREGA AO CLIENTE E ARMAZENAMENTO EM CACHE",
+                "titulo": f"PC-A recebe {resposta} em {rtt} e grava em Cache",
+                "resumo": (
+                    f"O Resolver armazena o resultado em cache por {ttl_s}s e o devolve a PC-A. "
+                    f"Agora a aplicação de PC-A já possui o endereço final para iniciar TCP/HTTP ou envio!"
+                ),
+                "cor": "success",
+                "dados": [
+                    ("Destino Final", resposta, "success"),
+                    ("Tempo Total", rtt, "primary"),
+                    ("Próxima Ação", "Conectar no IP/Host", "accent"),
+                ],
+                "anim": {
+                    "edge": "CLI_RES",
+                    "ativos": ("CLI", "RES"),
+                    "de": "RES",
+                    "para": "CLI",
+                    "pkt_label": f"OK {rtt}",
+                    "subs": {**subs_base, "CLI": f"Cache: {resposta[:16]}", "RES": f"Cached {ttl_s}s"},
+                },
+            },
+        ]
+
+    def _simular_dados_dns(self, dominio: str, tipo: str) -> dict:
+        _, _, valor = DockerNetworkLab._build_dns_record_data(dominio, tipo, self._ips_reais)
+        dom = re.sub(r"[^a-zA-Z0-9.\-]", "", dominio.strip().lower()) or "pm-painel.local"
+        return {
+            "sucesso": True,
+            "modo": "SIMULADO",
+            "dominio": dom,
+            "tipo": tipo,
+            "status": "NOERROR (Simulado)",
+            "rtt": f"{random.randint(2, 6)} ms",
+            "ttl": 300,
+            "msg_size": "58 bytes",
+            "servidor_dns": "192.168.10.20",
+            "resposta_principal": valor,
+            "registros": [
+                {"dominio": f"{dom}.", "ttl": "300s", "classe": "IN", "tipo": tipo, "valor": valor}
+            ],
+            "frame_dump": (
+                f"; <<>> Simulador DNS PM-Painel <<>> {dom} {tipo}\n"
+                f";; HEADER: opcode: QUERY, status: NOERROR\n"
+                f";; ANSWER SECTION:\n{dom}.\t300\tIN\t{tipo}\t{valor}"
+            ),
+        }
+
+    def _montar_tela_dns(self):
+        colors = paleta_praticas()
+        scroll = ScrollView(do_scroll_x=False, bar_width=dp(5), scroll_type=["bars", "content"])
+        container = GridLayout(cols=1, spacing=dp(10), padding=(dp(2), dp(4)), size_hint_y=None)
+        container.bind(minimum_height=container.setter("height"))
+
+        # 1. Entrada e Presets de Domínio & Tipo de Registro
+        card_cfg = criar_card(padding=dp(12), spacing=dp(8))
+        hdr = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(8))
+        hdr.add_widget(criar_label("1. Consultor Prático de Domínios & Registros DNS", size="13sp", bold=True, color=colors["text"]))
+        hdr.add_widget(Widget())
+        hdr.add_widget(criar_pill("UDP / PORTA 53", colors["tag_bg"], colors["accent"], "dns"))
+        card_cfg.add_widget(hdr)
+
+        presets_row = GridLayout(cols=5, spacing=dp(6), size_hint_y=None, height=dp(34))
+        for dom, rec in self.PRESETS_DNS:
+            sel = dom == self._dns_dominio_atual and rec == self._dns_tipo_atual
+            presets_row.add_widget(
+                criar_botao(
+                    f"{dom} ({rec})",
+                    partial(self._aplicar_preset_dns, dom, rec),
+                    variant="primary" if sel else "secondary",
+                    height=dp(32),
+                    font_size="9.5sp",
+                )
+            )
+        card_cfg.add_widget(presets_row)
+
+        input_row = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+        self.dns_input = CampoTexto(
+            hint_text="Digite um domínio (ex: pm-painel.local ou www.google.com)...",
+            appearance="dark" if tema_escuro() else "light",
+            size_hint_y=None,
+            height=dp(40),
+            font_size="11.5sp",
+        )
+        self.dns_input.text = self._dns_dominio_atual
+        self.dns_input._tema_aparencia = True
+        self.dns_input.size_hint_x = 0.48
+        input_row.add_widget(self.dns_input)
+
+        # Chips seletores de Tipo de Registro
+        tipos_box = GridLayout(cols=5, spacing=dp(4), size_hint=(0.30, None), height=dp(40))
+        self._dns_tipo_btns: dict[str, BotaoAcao] = {}
+        for t in ("A", "AAAA", "CNAME", "MX", "TXT"):
+            b = criar_botao(
+                t,
+                partial(self._selecionar_tipo_dns, t),
+                variant="primary" if t == self._dns_tipo_atual else "secondary",
+                height=dp(38),
+                font_size="10sp",
+            )
+            self._dns_tipo_btns[t] = b
+            tipos_box.add_widget(b)
+        input_row.add_widget(tipos_box)
+
+        btn_consultar = criar_botao(
+            "Consultar & Animar",
+            partial(self._executar_consulta_dns, auto_play=True),
+            variant="primary",
+            height=dp(40),
+            icone="docker" if self._lab_pronto else "dns",
+        )
+        btn_consultar.size_hint_x = 0.22
+        input_row.add_widget(btn_consultar)
+        card_cfg.add_widget(input_row)
+        container.add_widget(card_cfg)
+
+        # 2. HUD Telemetria DNS + Palco Animado + Player Passo a Passo
+        card_anim = criar_card(padding=dp(12), spacing=dp(8), elevated=True)
+        hdr_anim = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(8))
+        hdr_anim.add_widget(criar_label("2. Jornada Animada da Resolução DNS (Passo a Passo)", size="13sp", bold=True, color=colors["text"]))
+        hdr_anim.add_widget(Widget())
+        self._dns_modo_pill = criar_pill(
+            "DOCKER REAL DIG" if self._lab_pronto else "SIMULAÇÃO DNS",
+            colors["success_bg"] if self._lab_pronto else colors["tag_bg"],
+            colors["success"] if self._lab_pronto else colors["accent"],
+        )
+        hdr_anim.add_widget(self._dns_modo_pill)
+        card_anim.add_widget(hdr_anim)
+
+        kpi_dns = GridLayout(cols=5, spacing=dp(8), size_hint_y=None, height=dp(64))
+        self._dns_kpi_dom = criar_kpi_tile("Domínio", self._dns_dominio_atual, "Consulta QNAME", "primary")
+        self._dns_kpi_tipo = criar_kpi_tile("Registro", self._dns_tipo_atual, "QTYPE / IN", "info")
+        self._dns_kpi_status = criar_kpi_tile("Status", "NOERROR", "Header DNS", "success")
+        self._dns_kpi_rtt = criar_kpi_tile("Query Time", "-- ms", "TTL 300s", "warning")
+        self._dns_kpi_resp = criar_kpi_tile("Resposta Principal", "--", "Valor resolvido", "success")
+        for k in (self._dns_kpi_dom, self._dns_kpi_tipo, self._dns_kpi_status, self._dns_kpi_rtt, self._dns_kpi_resp):
+            kpi_dns.add_widget(k)
+        card_anim.add_widget(kpi_dns)
+
+        self._palco_dns = PalcoAnimadoDNS()
+        self._dns_player = PlayerPassoAPasso(self._palco_dns, intervalo_autoplay=2.7)
+        card_anim.add_widget(self._dns_player)
+        container.add_widget(card_anim)
+
+        # 3. Tabela HUD de Registros DNS + Drawer Bruto dig/tcpdump
+        card_resp = criar_card(padding=dp(12), spacing=dp(8))
+        card_resp.add_widget(criar_label("3. Seção de Resposta Estruturada (ANSWER SECTION HUD)", size="13sp", bold=True, color=colors["text"]))
+
+        self._dns_tabela_box = GridLayout(cols=1, spacing=dp(6), size_hint_y=None)
+        self._dns_tabela_box.bind(minimum_height=self._dns_tabela_box.setter("height"))
+        card_resp.add_widget(self._dns_tabela_box)
+
+        self._dns_dump_drawer = DrawerDumpBruto(titulo="Saída Bruta `dig` & Captura `tcpdump` UDP/53", icone="code-tags")
+        card_resp.add_widget(self._dns_dump_drawer)
+        container.add_widget(card_resp)
+
+        scroll.add_widget(container)
+        autoplay = bool(getattr(self, "_dns_autoplay_pendente", False))
+        self._dns_autoplay_pendente = False
+        self._aplicar_dados_dns(
+            self._dns_dominio_atual,
+            self._dns_tipo_atual,
+            self._simular_dados_dns(self._dns_dominio_atual, self._dns_tipo_atual),
+            auto_play=autoplay,
+        )
+        if self._lab_pronto:
+            self._executar_consulta_dns(auto_play=autoplay)
+        return scroll
+
+    def _aplicar_preset_dns(self, dom: str, tipo: str):
+        self._dns_dominio_atual = dom
+        self._dns_tipo_atual = tipo
+        self._dns_autoplay_pendente = True
+        self._atualizar_abas()
+
+    def _selecionar_tipo_dns(self, tipo: str):
+        self._dns_tipo_atual = tipo
+        if hasattr(self, "_dns_tipo_btns"):
+            for key, btn in self._dns_tipo_btns.items():
+                btn.variant = "primary" if key == tipo else "secondary"
+        self._executar_consulta_dns(auto_play=False)
+
+    def _executar_consulta_dns(self, auto_play: bool = False):
+        colors = paleta_praticas()
+        if hasattr(self, "dns_input"):
+            dom = self.dns_input.text.strip() or "pm-painel.local"
+        else:
+            dom = self._dns_dominio_atual
+        self._dns_dominio_atual = dom
+        tipo = self._dns_tipo_atual
+
+        if self._lab_pronto:
+            self._dns_kpi_status._lbl_valor.text = "Consultando..."
+            self._dns_kpi_status._lbl_valor.color = colors["warning"]
+
+            def worker():
+                dados = self.docker_lab.executar_experimento_dns(dom, tipo)
+                Clock.schedule_once(partial(self._on_dns_concluido, dom, tipo, dados, auto_play), 0)
+
+            threading.Thread(target=worker, daemon=True).start()
+        else:
+            dados = self._simular_dados_dns(dom, tipo)
+            self._aplicar_dados_dns(dom, tipo, dados, auto_play=auto_play)
+
+    def _on_dns_concluido(self, dom: str, tipo: str, dados: dict, auto_play: bool, _dt):
+        if self._aba_ativa != "dns" or not hasattr(self, "_dns_player") or self._dns_player.get_root_window() is None:
+            return
+        self._aplicar_dados_dns(dom, tipo, dados, auto_play=auto_play)
+
+    def _aplicar_dados_dns(self, dom: str, tipo: str, dados: dict, *, auto_play: bool):
+        colors = paleta_praticas()
+        self._dns_kpi_dom._lbl_valor.text = dados.get("dominio", dom)
+        self._dns_kpi_tipo._lbl_valor.text = tipo
+        self._dns_kpi_status._lbl_valor.text = dados.get("status", "NOERROR")
+        self._dns_kpi_status._lbl_valor.color = colors["success"] if dados.get("sucesso") else colors["danger"]
+        self._dns_kpi_rtt._lbl_valor.text = str(dados.get("rtt", "1 ms"))
+        self._dns_kpi_rtt._lbl_sub.text = f"TTL {dados.get('ttl', 300)}s • UDP/53"
+        self._dns_kpi_resp._lbl_valor.text = str(dados.get("resposta_principal", "--"))
+        self._dns_modo_pill.children[0].text = "DIG REAL DOCKER" if dados.get("modo") == "DOCKER_REAL" else "SIMULAÇÃO DNS"
+
+        self._dns_tabela_box.clear_widgets()
+        for reg in dados.get("registros", []):
+            row = BoxLayout(size_hint_y=None, height=dp(36), spacing=dp(6))
+            row.add_widget(criar_chip_dado("Nome", reg["dominio"], "primary"))
+            row.add_widget(criar_chip_dado("TTL / Classe", f"{reg['ttl']} • {reg['classe']}", "info"))
+            row.add_widget(criar_chip_dado(f"Tipo {reg['tipo']}", reg["valor"], "success"))
+            self._dns_tabela_box.add_widget(row)
+
+        dump = dados.get("frame_dump") or dados.get("raw_output", "")
+        self._dns_dump_drawer.definir_conteudo(dump, "dig + tcpdump" if self._lab_pronto else "Simulado")
+
+        passos = self._passos_dns(dados.get("dominio", dom), tipo, dados)
+        self._dns_player.definir_passos(passos, indice_inicial=0, auto_play=auto_play)
+
+    # =========================================================================
+    # ABA 4: CALCULADORA CIDR & CONVERSOR IP (HUD BINÁRIO + LINUX)
     # =========================================================================
 
     def _montar_tela_calculadora(self):
@@ -829,46 +1708,44 @@ class LaboratorioEnderecoIP(BoxLayout):
         container = GridLayout(cols=1, spacing=dp(10), padding=(dp(2), dp(4)), size_hint_y=None)
         container.bind(minimum_height=container.setter("height"))
 
-        # Card de Entrada
-        card_input = _card(padding=dp(12), spacing=dp(8))
+        card_input = criar_card(padding=dp(12), spacing=dp(8))
         header_calc = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(8))
-        header_calc.add_widget(_label("Calculadora de Sub-redes CIDR & Conversor IP", size="13sp", bold=True, color=colors["text"]))
+        header_calc.add_widget(criar_label("1. Calculadora de Sub-redes CIDR & Conversor IP", size="13sp", bold=True, color=colors["text"]))
         header_calc.add_widget(Widget())
-        header_calc.add_widget(_badge_pill("IPv4 & IPv6", colors["tag_bg"], colors["accent"], icone="calculator-variant"))
+        header_calc.add_widget(criar_pill("IPv4 & IPv6", colors["tag_bg"], colors["accent"], icone="calculator-variant"))
         card_input.add_widget(header_calc)
 
-        # Chips de exemplos rápidos com proporção moderna
-        row_chips = GridLayout(cols=5, spacing=dp(8), size_hint_y=None, height=dp(36))
+        row_chips = GridLayout(cols=5, spacing=dp(8), size_hint_y=None, height=dp(34))
         exemplos = ("192.168.10.0/24", "10.0.0.0/8", "172.16.0.0/16", "192.168.10.128/26", "2001:db8::/64")
         for ex in exemplos:
-            btn_ex = _button(ex, partial(self._aplicar_exemplo_calc, ex), variant="secondary", height=dp(34), font_size="11sp")
-            row_chips.add_widget(btn_ex)
+            row_chips.add_widget(criar_botao(ex, partial(self._aplicar_exemplo_calc, ex), variant="secondary", height=dp(32), font_size="10.5sp"))
         card_input.add_widget(row_chips)
 
         row_calc = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(10))
         self.calc_input = CampoTexto(
-            hint_text="Digite IP/prefixo CIDR (ex: 192.168.10.34/24 ou 10.0.0.0/16)...",
+            hint_text="Digite IP/prefixo CIDR (ex: 192.168.10.34/24 ou 2001:db8::/64)...",
             appearance="dark" if tema_escuro() else "light",
             size_hint_y=None,
             height=dp(42),
-            font_size="12sp"
+            font_size="12sp",
         )
         self.calc_input.text = "192.168.10.34/24"
+        self.calc_input._tema_aparencia = True
         self.calc_input.size_hint_x = 0.74
         row_calc.add_widget(self.calc_input)
 
-        btn_calc = _button("Calcular Sub-rede", self._calcular_cidr, variant="primary", height=dp(42), icone="calculator")
+        btn_calc = criar_botao("Calcular Sub-rede", self._calcular_cidr, variant="primary", height=dp(42), icone="calculator-variant")
         btn_calc.size_hint_x = 0.26
         row_calc.add_widget(btn_calc)
         card_input.add_widget(row_calc)
         container.add_widget(card_input)
 
-        # Painel de Métricas da Rede em Grid Estruturado
-        card_metricas = _card(padding=dp(12), spacing=dp(8), elevated=True)
+        # Painel de Métricas
+        card_metricas = criar_card(padding=dp(12), spacing=dp(8), elevated=True)
         header_met = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(8))
-        header_met.add_widget(_label("Métricas e Faixas de Endereçamento Calculadas", size="13sp", bold=True, color=colors["text"]))
+        header_met.add_widget(criar_label("2. Métricas e Faixas de Endereçamento Calculadas", size="13sp", bold=True, color=colors["text"]))
         header_met.add_widget(Widget())
-        self.calc_badge_resumo = _badge_pill("IPv4 • /24", colors["success_bg"], colors["success"])
+        self.calc_badge_resumo = criar_pill("IPv4 • /24", colors["success_bg"], colors["success"])
         header_met.add_widget(self.calc_badge_resumo)
         card_metricas.add_widget(header_met)
 
@@ -877,86 +1754,32 @@ class LaboratorioEnderecoIP(BoxLayout):
         card_metricas.add_widget(self.calc_grid_metricas)
         container.add_widget(card_metricas)
 
-        # Conversão Binária, Hexadecimal e Sintaxe do Kernel Linux
-        card_conv = _card(padding=dp(12), spacing=dp(8))
-        card_conv.add_widget(_label("Representação Binária e Comandos Reais do Kernel Linux (iproute2)", size="13sp", bold=True, color=colors["text"]))
+        # HUD Binário Colorido + Comandos Linux Estruturados
+        card_conv = criar_card(padding=dp(12), spacing=dp(8))
+        hdr_bin = BoxLayout(size_hint_y=None, height=dp(24), spacing=dp(8))
+        hdr_bin.add_widget(criar_label("3. Divisão Visual de Bits (Net ID vs Host ID) & Comandos Linux", size="13sp", bold=True, color=colors["text"]))
+        hdr_bin.add_widget(Widget())
+        hdr_bin.add_widget(criar_pill("Azul: Rede", colors["tag_bg"], colors["primary"], height=dp(22)))
+        hdr_bin.add_widget(criar_pill("Verde: Host", colors["success_bg"], colors["success"], height=dp(22)))
+        card_conv.add_widget(hdr_bin)
 
-        # Sub-bloco binário
-        self.calc_box_binario = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(100),
-                                          padding=(dp(12), dp(8)), spacing=dp(4))
-        with self.calc_box_binario.canvas.before:
-            Color(*colors["shell"])
-            bg_bin = RoundedRectangle(pos=self.calc_box_binario.pos, size=self.calc_box_binario.size, radius=[dp(8)])
-            Color(*colors["border"])
-            b_bin = Line(rounded_rectangle=(self.calc_box_binario.x, self.calc_box_binario.y, self.calc_box_binario.width, self.calc_box_binario.height, dp(8)), width=dp(1))
-        self.calc_box_binario.bind(
-            pos=lambda item, val, s=bg_bin, ln=b_bin: (setattr(s, "pos", val), setattr(ln, "rounded_rectangle", (val[0], val[1], item.width, item.height, dp(8)))),
-            size=lambda item, val, s=bg_bin, ln=b_bin: (setattr(s, "size", val), setattr(ln, "rounded_rectangle", (item.x, item.y, val[0], val[1], dp(8))))
-        )
-        self.calc_label_bin = _label("", size="11sp", color=colors["text"], height=dp(84))
-        self.calc_box_binario.add_widget(self.calc_label_bin)
+        self.calc_box_binario = GridLayout(cols=1, spacing=dp(6), size_hint_y=None)
+        self.calc_box_binario.bind(minimum_height=self.calc_box_binario.setter("height"))
         card_conv.add_widget(self.calc_box_binario)
 
-        # Sub-bloco terminal Linux iproute2
-        self.calc_box_term = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(120),
-                                       padding=(dp(12), dp(8)), spacing=dp(4))
-        with self.calc_box_term.canvas.before:
-            Color(*colors["shell"])
-            bg_term = RoundedRectangle(pos=self.calc_box_term.pos, size=self.calc_box_term.size, radius=[dp(8)])
-            Color(0.2, 0.45, 0.8, 0.35)
-            b_term = Line(rounded_rectangle=(self.calc_box_term.x, self.calc_box_term.y, self.calc_box_term.width, self.calc_box_term.height, dp(8)), width=dp(1))
-        self.calc_box_term.bind(
-            pos=lambda item, val, s=bg_term, ln=b_term: (setattr(s, "pos", val), setattr(ln, "rounded_rectangle", (val[0], val[1], item.width, item.height, dp(8)))),
-            size=lambda item, val, s=bg_term, ln=b_term: (setattr(s, "size", val), setattr(ln, "rounded_rectangle", (item.x, item.y, val[0], val[1], dp(8))))
-        )
-        term_header = BoxLayout(size_hint_y=None, height=dp(20), spacing=dp(6))
-        term_header.add_widget(IconeUI(nome="console", size_hint=(None, None), size=(dp(16), dp(16)), font_size="13sp", color=colors["success"]))
-        term_header.add_widget(_label("Terminal Linux Kernel • iproute2", size="10sp", bold=True, color=colors["muted"]))
-        self.calc_box_term.add_widget(term_header)
-
-        self.calc_label_term = _label("", size="10sp", color=colors["text_secondary"], height=dp(88), auto_height=True)
-        self.calc_box_term.add_widget(self.calc_label_term)
-        card_conv.add_widget(self.calc_box_term)
+        self.calc_box_comandos = GridLayout(cols=1, spacing=dp(6), size_hint_y=None)
+        self.calc_box_comandos.bind(minimum_height=self.calc_box_comandos.setter("height"))
+        card_conv.add_widget(self.calc_box_comandos)
 
         container.add_widget(card_conv)
-
         scroll.add_widget(container)
-        Clock.schedule_once(lambda _dt: self._calcular_cidr(), 0)
+        self._calcular_cidr()
         return scroll
 
     def _aplicar_exemplo_calc(self, ex: str):
         if hasattr(self, "calc_input"):
             self.calc_input.text = ex
             self._calcular_cidr()
-
-    def _criar_tile_metrica(self, title: str, value: str, sub: str, cor_val) -> BoxLayout:
-        colors = paleta_praticas()
-        tile = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(70),
-                         padding=(dp(12), dp(6)), spacing=dp(2))
-        with tile.canvas.before:
-            fill = Color(*colors["card"])
-            bg = RoundedRectangle(pos=tile.pos, size=tile.size, radius=[dp(8)])
-            Color(*colors["border"])
-            b = Line(rounded_rectangle=(tile.x, tile.y, tile.width, tile.height, dp(8)), width=dp(1))
-        tile.bind(
-            pos=lambda item, val, s=bg, ln=b: (setattr(s, "pos", val), setattr(ln, "rounded_rectangle", (val[0], val[1], item.width, item.height, dp(8)))),
-            size=lambda item, val, s=bg, ln=b: (setattr(s, "size", val), setattr(ln, "rounded_rectangle", (item.x, item.y, val[0], val[1], dp(8))))
-        )
-        lbl_t = Label(text=title.upper(), font_size="9sp", bold=True, color=colors["muted"],
-                      size_hint_y=None, height=dp(14), halign="left", valign="middle")
-        lbl_t.bind(size=lambda item, sz: setattr(item, "text_size", sz))
-        tile.add_widget(lbl_t)
-
-        lbl_v = Label(text=value, font_size="13sp", bold=True, color=cor_val,
-                      size_hint_y=None, height=dp(24), halign="left", valign="middle")
-        lbl_v.bind(size=lambda item, sz: setattr(item, "text_size", sz))
-        tile.add_widget(lbl_v)
-
-        lbl_s = Label(text=sub, font_size="10sp", color=colors["text_secondary"],
-                      size_hint_y=None, height=dp(14), halign="left", valign="middle")
-        lbl_s.bind(size=lambda item, sz: setattr(item, "text_size", sz))
-        tile.add_widget(lbl_s)
-        return tile
 
     def _calcular_cidr(self):
         colors = paleta_praticas()
@@ -965,12 +1788,14 @@ class LaboratorioEnderecoIP(BoxLayout):
             rede = ipaddress.ip_network(texto, strict=False)
         except ValueError:
             self.calc_grid_metricas.clear_widgets()
-            erro_box = _label("Endereço ou máscara inválida. Utilize notação CIDR válida (ex.: 192.168.10.0/24 ou 2001:db8::/64).",
-                              size="12sp", color=colors["danger"], height=dp(40))
-            self.calc_grid_metricas.add_widget(erro_box)
+            self.calc_grid_metricas.add_widget(
+                criar_label("Endereço ou máscara inválida. Utilize notação CIDR (ex.: 192.168.10.0/24).", size="12sp", color=colors["danger"], height=dp(36))
+            )
             return
 
         self.calc_grid_metricas.clear_widgets()
+        self.calc_box_binario.clear_widgets()
+        self.calc_box_comandos.clear_widgets()
 
         if rede.version == 4:
             hosts = list(rede.hosts()) if rede.num_addresses <= 256 else None
@@ -981,72 +1806,65 @@ class LaboratorioEnderecoIP(BoxLayout):
 
             self.calc_badge_resumo.children[0].text = f"IPv4 • /{rede.prefixlen} • {rede.num_addresses:,} IPs"
 
-            # 6 tiles estruturados
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Endereço de Rede", f"{rede.network_address}/{rede.prefixlen}", "Primeiro IP • ID do segmento", colors["primary"]
-            ))
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Máscara de Sub-rede", f"{rede.netmask}", f"Prefixo CIDR: /{rede.prefixlen}", colors["text"]
-            ))
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Faixa de Hosts Úteis", f"{primeiro} ➔ {ultimo}", f"{hosts_uteis:,} hosts utilizáveis", colors["accent"]
-            ))
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Endereço de Broadcast", f"{rede.broadcast_address}", "Último IP • Difusão na rede", colors["danger"]
-            ))
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Máscara Curinga (Wildcard)", f"{rede.hostmask}", "Inverso da máscara (ACL / OSPF)", colors["text"]
-            ))
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Escopo e Alocação", f"{escopo}", f"Total de {rede.num_addresses:,} IPs alocados", colors["success"]
-            ))
-
-            octetos_bin = " . ".join(f"{b:08b}" for b in rede.network_address.packed)
-            mask_bin = " . ".join(f"{b:08b}" for b in rede.netmask.packed)
-            octetos_hex = " . ".join(f"{b:02X}" for b in rede.network_address.packed)
-
-            self.calc_label_bin.text = (
-                f"Endereço de Rede em Binário:  {octetos_bin}\n"
-                f"Máscara de Rede em Binário:   {mask_bin}\n"
-                f"Endereço em Hexadecimal:      {octetos_hex}\n"
-                f"Alocação de Bits no Endereço: {rede.prefixlen} bits de Rede (Net ID)  •  {32 - rede.prefixlen} bits de Host (Host ID)"
+            metricas = (
+                ("Endereço de Rede", f"{rede.network_address}/{rede.prefixlen}", "ID do segmento", "primary"),
+                ("Máscara de Sub-rede", f"{rede.netmask}", f"Prefixo /{rede.prefixlen}", "text"),
+                ("Faixa de Hosts Úteis", f"{primeiro} ➔ {ultimo}", f"{hosts_uteis:,} hosts válidos", "accent"),
+                ("Endereço de Broadcast", f"{rede.broadcast_address}", "Difusão na sub-rede", "danger"),
+                ("Máscara Curinga (Wildcard)", f"{rede.hostmask}", "Uso em ACL / OSPF", "text"),
+                ("Escopo & Bits", f"{escopo}", f"{rede.prefixlen}b Rede • {32 - rede.prefixlen}b Host", "success"),
             )
+            for t, v, s, role in metricas:
+                self.calc_grid_metricas.add_widget(criar_kpi_tile(t, v, s, cor_role=role, height=dp(68)))
 
-            self.calc_label_term.text = (
-                f"# 1. Configurar endereço e máscara na interface de rede:\n"
-                f"ip addr add {rede.network_address + 1}/{rede.prefixlen} dev eth0\n"
-                f"# 2. Ativar interface e adicionar rota do segmento de rede:\n"
-                f"ip link set eth0 up && ip route add {rede.network_address}/{rede.prefixlen} dev eth0\n"
-                f"# 3. Inspecionar endereços e rotas ativas no kernel Linux:\n"
-                f"ip -br addr show dev eth0  &&  ip route show"
+            self.calc_box_binario.add_widget(
+                construir_visualizador_bits_ipv4(rede.network_address.packed, rede.prefixlen, "Rede (Bin)", str(rede.network_address))
+            )
+            self.calc_box_binario.add_widget(
+                construir_visualizador_bits_ipv4(rede.netmask.packed, rede.prefixlen, "Máscara (Bin)", str(rede.netmask))
+            )
+            hex_row = GridLayout(cols=3, spacing=dp(8), size_hint_y=None, height=dp(30))
+            hex_str = ".".join(f"{b:02X}" for b in rede.network_address.packed)
+            hex_row.add_widget(criar_chip_dado("Hexadecimal", hex_str, "info"))
+            hex_row.add_widget(criar_chip_dado("Bits de Rede", f"{rede.prefixlen} bits", "primary"))
+            hex_row.add_widget(criar_chip_dado("Bits de Host", f"{32 - rede.prefixlen} bits", "success"))
+            self.calc_box_binario.add_widget(hex_row)
+
+            cmds = (
+                ("1. Atribuir IP", f"ip addr add {rede.network_address + 1}/{rede.prefixlen} dev eth0"),
+                ("2. Subir e Rotear", f"ip link set eth0 up && ip route add {rede.network_address}/{rede.prefixlen} dev eth0"),
+                ("3. Inspecionar Kernel", "ip -br addr show dev eth0 && ip route show"),
             )
         else:
             self.calc_badge_resumo.children[0].text = f"IPv6 • /{rede.prefixlen}"
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Endereço de Rede IPv6", f"{rede.network_address}/{rede.prefixlen}", "Prefixo Global de Roteamento", colors["primary"]
-            ))
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Tamanho do Prefixo", f"/{rede.prefixlen} bits", f"Tamanho de Sub-rede padrão", colors["text"]
-            ))
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Faixa Total de Alocação", f"{rede.network_address} ➔ {rede.broadcast_address}", "Espaço de endereçamento IPv6", colors["accent"]
-            ))
-            self.calc_grid_metricas.add_widget(self._criar_tile_metrica(
-                "Escopo do Bloco", f"{'Privado / ULA' if rede.is_private else 'Global Unicast'}", "Padrão RFC 4193 / IANA", colors["success"]
-            ))
+            metricas = (
+                ("Endereço IPv6", f"{rede.network_address}/{rede.prefixlen}", "Prefixo de Roteamento", "primary"),
+                ("Tamanho do Prefixo", f"/{rede.prefixlen} bits", f"{128 - rede.prefixlen} bits Interface ID", "text"),
+                ("Faixa de Alocação", f"{rede.network_address} ➔ {rede.broadcast_address}", "Bloco completo IPv6", "accent"),
+                ("Escopo do Bloco", "Privado ULA" if rede.is_private else "Global Unicast", "RFC 4193 / IANA", "success"),
+                ("Expandido", rede.network_address.exploded[:28] + "...", "Notação 128 bits", "info"),
+                ("Comprimido", rede.network_address.compressed, "Notação compacta", "primary"),
+            )
+            for t, v, s, role in metricas:
+                self.calc_grid_metricas.add_widget(criar_kpi_tile(t, v, s, cor_role=role, height=dp(68)))
 
-            self.calc_label_bin.text = (
-                f"Formato Expandido:  {rede.network_address.exploded}\n"
-                f"Formato Comprimido: {rede.network_address.compressed}\n"
-                f"Bits de Prefixo: /{rede.prefixlen}  |  Bits de Interface ID: {128 - rede.prefixlen}"
+            v6_row = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(32))
+            v6_row.add_widget(criar_chip_dado("Formato Expandido", rede.network_address.exploded, "info", height=dp(32)))
+            v6_row.add_widget(criar_chip_dado("Comprimido", rede.network_address.compressed, "primary", height=dp(32)))
+            self.calc_box_binario.add_widget(v6_row)
+
+            cmds = (
+                ("1. Atribuir IPv6", f"ip -6 addr add {rede.network_address}1/{rede.prefixlen} dev eth0"),
+                ("2. Inspecionar IPv6", "ip -6 -br addr show dev eth0"),
             )
 
-            self.calc_label_term.text = (
-                f"# 1. Atribuir endereço IPv6 na interface:\n"
-                f"ip -6 addr add {rede.network_address}1/{rede.prefixlen} dev eth0\n"
-                f"# 2. Visualizar endereços IPv6 ativos no terminal:\n"
-                f"ip -6 -br addr show dev eth0"
-            )
+        for tag, cmd_str in cmds:
+            row_cmd = BoxLayout(size_hint_y=None, height=dp(32), spacing=dp(8))
+            pill_tag = criar_pill(tag, colors["tag_bg"], colors["accent"], height=dp(26), fixed_width=dp(150))
+            pill_tag.pos_hint = {"center_y": 0.5}
+            row_cmd.add_widget(pill_tag)
+            row_cmd.add_widget(criar_chip_dado("Linux", cmd_str, "success", height=dp(30)))
+            self.calc_box_comandos.add_widget(row_cmd)
 
 
 class LaboratorioDocker(BoxLayout):
@@ -1094,30 +1912,29 @@ class LaboratorioDocker(BoxLayout):
             self._voltar,
             "Rede Local com Containers Debian • Laboratório Docker",
             "Dois consoles executam comandos Bash reais em containers Debian conectados por uma rede de bridge interna.",
-            icone="docker"
+            icone="docker",
         ))
 
-        # Configuração de IPs
         self.add_widget(self._montar_configuracao())
-
-        # Controles Principais
         self.add_widget(self._montar_controles())
-
-        # Botões de Ações Rápidas de Rede Real
         self.add_widget(self._montar_acoes_rapidas())
 
-        # Cards dos Terminais e Comandos Recomendados
+        self._drawer_rapido = DrawerDumpBruto(titulo="Resultado do Último Comando Rápido (Docker)", icone="console")
+        self._drawer_rapido.definir_conteudo("Execute uma ação rápida acima para inspecionar a saída do container.", "Aguardando")
+        self.add_widget(self._drawer_rapido)
+
         grid_painel = GridLayout(cols=2, spacing=dp(10), size_hint=(1, 1))
         grid_painel.add_widget(self._montar_terminal("A"))
         grid_painel.add_widget(self._montar_terminal("B"))
         self.add_widget(grid_painel)
 
-        # Guia Prático de Comandos
-        card_guia = _card(padding=dp(8), spacing=dp(4))
-        card_guia.height = dp(52)
-        card_guia.add_widget(_label("Comandos práticos recomendados no terminal:", size="10sp", bold=True, color=paleta_praticas()["accent"], height=dp(18)))
-        card_guia.add_widget(_label("• Teste de conectividade: ping -c 4 192.168.10.20   |   • Interfaces: ip a   |   • Captura: tcpdump -c 5 -i eth0",
-                                    size="10sp", color=paleta_praticas()["muted"], height=dp(20)))
+        card_guia = criar_card(padding=dp(8), spacing=dp(4))
+        card_guia.add_widget(criar_label("Comandos recomendados no terminal:", size="10sp", bold=True, color=paleta_praticas()["accent"], height=dp(18), role="accent"))
+        guia_row = GridLayout(cols=3, spacing=dp(6), size_hint_y=None, height=dp(28))
+        guia_row.add_widget(criar_chip_dado("Conectividade", "ping -c 4 192.168.10.20", "success", height=dp(26)))
+        guia_row.add_widget(criar_chip_dado("Interfaces", "ip a && ip route", "primary", height=dp(26)))
+        guia_row.add_widget(criar_chip_dado("Captura", "tcpdump -c 5 -i eth0", "info", height=dp(26)))
+        card_guia.add_widget(guia_row)
         self.add_widget(card_guia)
 
     def aplicar_tema(self):
@@ -1128,14 +1945,14 @@ class LaboratorioDocker(BoxLayout):
         area = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(106))
         for key in ("A", "B"):
             node = self.nos[key]
-            card = _card(padding=dp(8), spacing=dp(4), elevated=True)
+            card = criar_card(padding=dp(8), spacing=dp(4), elevated=True)
             card.height = dp(106)
-            card.add_widget(_label(f"Endereçamento de {node['nome']}", size="11sp", bold=True, color=colors["text"], height=dp(20)))
+            card.add_widget(criar_label(f"Endereçamento de {node['nome']}", size="11sp", bold=True, color=colors["text"], height=dp(20)))
             address = _campo("IPv4 com prefixo CIDR", "192.168.10.10/24", height=dp(32))
             address.input.text = str(node["interface"])
             self.enderecos[key] = address.input
             card.add_widget(address)
-            status = _label("Aguardando início do laboratório.", size="9sp", color=colors["muted"], height=dp(16))
+            status = criar_label("Aguardando início do laboratório.", size="9sp", color=colors["muted"], height=dp(16), role="muted")
             self.statuses[key] = status
             card.add_widget(status)
             area.add_widget(card)
@@ -1144,28 +1961,46 @@ class LaboratorioDocker(BoxLayout):
     def _montar_controles(self):
         colors = paleta_praticas()
         area = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8))
-        area.add_widget(_button("Iniciar / Aplicar IPs", self._iniciar, height=dp(36), font_size="10sp", icone="play"))
+        area.add_widget(criar_botao("Iniciar / Aplicar IPs", self._iniciar, height=dp(36), font_size="10sp", icone="play"))
 
-        self._console_button = _button("Abrir Terminais Interativos", self._abrir_terminais,
-                                       variant="primary", height=dp(36), font_size="10sp", icone="open-in-new")
+        self._console_button = criar_botao(
+            "Abrir Terminais Interativos",
+            self._abrir_terminais,
+            variant="primary",
+            height=dp(36),
+            font_size="10sp",
+            icone="console",
+        )
         self._console_button.disabled = True
         area.add_widget(self._console_button)
 
-        area.add_widget(_button("Encerrar Laboratório", self._encerrar, variant="secondary",
-                                height=dp(36), font_size="10sp", icone="stop"))
+        area.add_widget(criar_botao("Encerrar Laboratório", self._encerrar, variant="secondary", height=dp(36), font_size="10sp", icone="restart"))
 
-        self.status_lab = _label(
+        self.status_lab = criar_label(
             self._terminal_error or "Inicie a rede para liberar os consoles Linux interativos.",
-            size="9sp", color=colors["muted"], height=dp(36), valign="middle")
+            size="9.5sp",
+            color=colors["muted"],
+            height=dp(36),
+            valign="middle",
+            role="muted",
+        )
         area.add_widget(self.status_lab)
         return area
 
     def _montar_acoes_rapidas(self):
         row_acoes = GridLayout(cols=4, spacing=dp(8), size_hint_y=None, height=dp(34))
-        row_acoes.add_widget(_button("⚡ Ping Real A➔B", lambda: self._executar_acao_rapida("ping -c 3 192.168.10.20", "Ping PC-A ➔ PC-B"), variant="secondary", height=dp(32), font_size="9sp", icone="network"))
-        row_acoes.add_widget(_button("📡 Capturar tcpdump", lambda: self._executar_acao_rapida("timeout 3 tcpdump -c 3 -nn -XX -l -Z root -i eth0 2>&1", "Captura tcpdump PC-B", target_pc="B"), variant="secondary", height=dp(32), font_size="9sp", icone="file-document-outline"))
-        row_acoes.add_widget(_button("📋 Tabela ARP (ip neigh)", lambda: self._executar_acao_rapida("ip neigh show", "Tabela ARP (PC-A)"), variant="secondary", height=dp(32), font_size="9sp", icone="format-list-bulleted"))
-        row_acoes.add_widget(_button("🗺️ Rotas (ip route)", lambda: self._executar_acao_rapida("ip route show", "Tabela de Rotas (PC-A)"), variant="secondary", height=dp(32), font_size="9sp", icone="routes"))
+        row_acoes.add_widget(
+            criar_botao("Ping Real A➔B", lambda: self._executar_acao_rapida("ping -c 3 192.168.10.20", "Ping PC-A ➔ PC-B"), variant="secondary", height=dp(32), font_size="9.5sp", icone="network")
+        )
+        row_acoes.add_widget(
+            criar_botao("Capturar tcpdump", lambda: self._executar_acao_rapida("timeout 3 tcpdump -c 3 -nn -XX -l -Z root -i eth0 2>&1", "Captura tcpdump PC-B", target_pc="B"), variant="secondary", height=dp(32), font_size="9.5sp", icone="code-tags")
+        )
+        row_acoes.add_widget(
+            criar_botao("Tabela ARP (ip neigh)", lambda: self._executar_acao_rapida("ip neigh show", "Tabela ARP (PC-A)"), variant="secondary", height=dp(32), font_size="9.5sp", icone="lan")
+        )
+        row_acoes.add_widget(
+            criar_botao("Rotas (ip route)", lambda: self._executar_acao_rapida("ip route show", "Tabela de Rotas (PC-A)"), variant="secondary", height=dp(32), font_size="9.5sp", icone="routes")
+        )
         return row_acoes
 
     def _executar_acao_rapida(self, comando: str, titulo: str, target_pc="A"):
@@ -1173,7 +2008,7 @@ class LaboratorioDocker(BoxLayout):
         if not self._pronto:
             self.status_lab.text = "Inicie os containers antes de executar comandos rápidos."
             return
-        self.status_lab.text = f"⚡ Executando '{titulo}' no container {target_pc}..."
+        self.status_lab.text = f"Executando '{titulo}' no container {target_pc}..."
         self.status_lab.color = colors["warning"]
 
         def worker():
@@ -1188,32 +2023,32 @@ class LaboratorioDocker(BoxLayout):
 
     def _on_acao_rapida_concluida(self, titulo, out):
         colors = paleta_praticas()
-        self.status_lab.text = f"[{titulo}]: {out[:120]}..."
+        self.status_lab.text = f"{titulo}: concluído com sucesso."
         self.status_lab.color = colors["success"]
+        if hasattr(self, "_drawer_rapido"):
+            self._drawer_rapido.definir_conteudo(out or "(Sem saída)", titulo)
+            self._drawer_rapido._aplicar_estado_aberto(True)
 
     def _montar_terminal(self, key):
         colors = paleta_praticas()
         node = self.nos[key]
-        panel = _card(padding=dp(10), spacing=dp(6), elevated=False)
+        panel = criar_card(padding=dp(10), spacing=dp(6), elevated=False)
         heading = BoxLayout(size_hint_y=None, height=dp(28), spacing=dp(8))
-        heading.add_widget(IconeUI(nome="console", size_hint=(None, None), size=(dp(24), dp(24)),
-                                   font_size=dp(20), color=colors["accent"]))
-        title = _label(node["nome"], size="13sp", bold=True, color=colors["text"], height=dp(26))
+        heading.add_widget(IconeUI(nome="console", size_hint=(None, None), size=(dp(24), dp(24)), font_size=dp(20), color=colors["accent"]))
+        title = criar_label(node["nome"], size="13sp", bold=True, color=colors["text"], height=dp(26))
         heading.add_widget(title)
         self.titulos[key] = title
         panel.add_widget(heading)
 
-        address = _label(f"IP: {node['interface'].ip}/{node['interface'].network.prefixlen}",
-                         size="10sp", color=colors["primary"], bold=True, height=dp(20))
+        address = criar_label(f"IP: {node['interface'].ip}/{node['interface'].network.prefixlen}", size="10sp", color=colors["primary"], bold=True, height=dp(20), role="primary")
         self.terminal_addresses[key] = address
         panel.add_widget(address)
 
-        status = _label("Aguardando início do container.", size="10sp", color=colors["muted"], height=dp(22))
+        status = criar_label("Aguardando início do container.", size="10sp", color=colors["muted"], height=dp(22), role="muted")
         self.terminal_statuses[key] = status
         panel.add_widget(status)
 
-        panel.add_widget(_label("Shell Bash Debian completo com TTY, comandos iproute2, ping, traceroute e tcpdump.",
-                                size="10sp", color=colors["muted"], height=dp(42), valign="top"))
+        panel.add_widget(criar_label("Shell Bash Debian completo com TTY, iproute2, ping, dig e tcpdump.", size="10sp", color=colors["muted"], height=dp(36), valign="top", role="muted"))
         return panel
 
     def _abrir_terminais(self):
